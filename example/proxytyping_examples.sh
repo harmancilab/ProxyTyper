@@ -1,5 +1,15 @@
 #!/bin/bash
 
+if [[ $# -lt 1 ]]
+then
+	 echo "$0 [options] 
+	-clean_directory
+	-setup_reference_query_panels
+	-proxytype_query_panel"
+
+	exit 1
+fi
+
 # Setup the parameters that we will use below to select tags/targets, sample sizes, etc.
 N_TYPED=16000
 N_REF_PANEL=2000
@@ -7,6 +17,8 @@ PER_CHROM_MAPS_DIR=../../DATA/beagle_genetic_maps/genetic_maps
 CHR_ID=22
 ASSEMBLY_ID=hg19
 PROXYTYPER_EXEC=ProxyTyper_Release
+
+cmd_option=$1
 
 if [[ ! -d ${PER_CHROM_MAPS_DIR} ]]
 then
@@ -27,6 +39,7 @@ then
 	fi
 
 	cp ProxyTyper/scripts/*.sh .
+	cp ProxyTyper/example/*.sh .
 	dos2unix.sh *.sh
 	chmod 755 *.sh
 
@@ -61,61 +74,82 @@ mv excluded.bed targets.bed
 	exit 0
 fi
 
-# Anonymize the coordinates and genetic maps.
-Query_Panel_haplocoded_tag_matbed=chr${CHR_ID}_Query_panel_tag_haplocoded.matbed.gz
-Query_Panel_haplocoded_target_matbed=chr${CHR_ID}_Query_panel_target_haplocoded.matbed.gz
-Query_panel_sample_list=query_panel_sample_ids.list
-per_chrom_maps_dir=${PER_CHROM_MAPS_DIR}
-resampling_op_prefix=chr${CHR_ID}_Query_panel
-resampled_size=`wc -l ${Query_panel_sample_list} | awk {'print 2*$1'}`
-N_e_frac=0.05
-allele_eps=0
-max_l_seg_n_bps=10000000
-max_l_seg_cM=0
-max_l_seg_nvars=0
-n_threads=20
-start_posn=0
-end_posn=250000000
-
-if [[ ! -f "${Query_Panel_haplocoded_tag_matbed}" ]]
+if [[ ${cmd_option} ==  "-proxytype_query_panel" ]]
 then
-	echo "Could not find extracted tag genotypes."
-	exit 1
-fi
+	# Anonymize the coordinates and genetic maps.
+	Query_Panel_haplocoded_tag_matbed=chr${CHR_ID}_query_panel_tag_haplocoded.matbed.gz
+	Query_Panel_haplocoded_target_matbed=chr${CHR_ID}_query_panel_target_haplocoded.matbed.gz
+	Query_panel_sample_list=query_panel_sample_ids.list
+	per_chrom_maps_dir=${PER_CHROM_MAPS_DIR}
+	resampling_op_prefix=chr${CHR_ID}_query_panel
+	resampled_size=`wc -l ${Query_panel_sample_list} | awk {'print 2*$1'}`
+	N_e_frac=0.05
+	allele_eps=0
+	max_l_seg_n_bps=10000000
+	max_l_seg_cM=0
+	max_l_seg_nvars=0
+	n_threads=20
+	start_posn=0
+	end_posn=250000000
 
-if [[ ! -f "${Query_Panel_haplocoded_target_matbed}" ]]
-then
-	echo "Could not find extracted target genotypes."
-	exit 1
-fi
+	if [[ ! -f "${Query_Panel_haplocoded_tag_matbed}" ]]
+	then
+		echo "Could not find extracted tag genotypes."
+		exit 1
+	fi
 
-if [[ ! -f "${Query_panel_sample_list}" ]]
-then
-	echo "Could not find extracted sample identifiers."
-	exit 1
-fi
+	if [[ ! -f "${Query_Panel_haplocoded_target_matbed}" ]]
+	then
+		echo "Could not find extracted target genotypes."
+		exit 1
+	fi
 
-echo "Writing ${resampled_size}"
+	if [[ ! -f "${Query_panel_sample_list}" ]]
+	then
+		echo "Could not find extracted sample identifiers."
+		exit 1
+	fi
 
-./ProxyTyper.sh -resample_tag_target_genotypes_w_length_cutoff ${Query_Panel_haplocoded_tag_matbed} ${Query_Panel_haplocoded_target_matbed} ${Query_panel_sample_list} \
+	echo "Resampling ${resampled_size} subjects.."
+
+	./ProxyTyper.sh -resample_tag_target_genotypes_w_length_cutoff ${Query_Panel_haplocoded_tag_matbed} ${Query_Panel_haplocoded_target_matbed} ${Query_panel_sample_list} \
 ${resampled_size} ${per_chrom_maps_dir} ${N_e_frac} ${allele_eps} \
 ${max_l_seg_n_bps} ${max_l_seg_cM} ${max_l_seg_nvars} \
 ${n_threads} ${resampling_op_prefix} 
 
-haplocoded_resampled_target_matbed=chr${CHR_ID}_Query_panel_resampled_targets.matbed.gz
-haplocoded_resampled_tag_matbed=chr${CHR_ID}_Query_panel_resampled_tags.matbed.gz
-resampled_sample_list=chr${CHR_ID}_Query_panel_resampled_sample_ids.list
-filter_proxization_vicinity_size=6
-var_weight_prob=0.5
-var2var_interaction_prob=0.8
-var2var2var_interaction_prob=0.3
-filter_weight_inversion_prob=0.5
-coding_modulus=2
-normalized_N_e=15
-filter_proxization_min_n_params_per_var=2
-per_chrom_maps_dir=${PER_CHROM_MAPS_DIR}
-weight_params_file=proxy_generation_parameters.model
-ProxyTyper_Release -generate_save_per_site_mixing_parameters_LD_aware ${haplocoded_resampled_tag_matbed} ${resampled_sample_list} \
+	haplocoded_resampled_target_matbed=chr${CHR_ID}_query_panel_resampled_targets.matbed.gz
+	haplocoded_resampled_tag_matbed=chr${CHR_ID}_query_panel_resampled_tags.matbed.gz
+	resampled_sample_list=chr${CHR_ID}_Query_panel_resampled_sample_ids.list
+
+	if [[ ! -f ${haplocoded_resampled_target_matbed} ]]
+	then
+		echo "Could not find resampled untyped variants file."
+		exit 1
+	fi
+
+	if [[ ! -f ${haplocoded_resampled_tag_matbed} ]]
+	then
+		echo "Could not find resampled typed variants file."
+		exit 1
+	fi
+
+	if [[ ! -f ${resampled_sample_list} ]]
+	then
+		echo "Could not find resampled subject id's list file."
+		exit 1
+	fi
+
+	filter_proxization_vicinity_size=6
+	var_weight_prob=0.5
+	var2var_interaction_prob=0.8
+	var2var2var_interaction_prob=0.3
+	filter_weight_inversion_prob=0.5
+	coding_modulus=2
+	normalized_N_e=15
+	filter_proxization_min_n_params_per_var=2
+	per_chrom_maps_dir=${PER_CHROM_MAPS_DIR}
+	weight_params_file=proxy_generation_parameters.model
+	${PROXYTYPER_EXEC} -generate_save_per_site_mixing_parameters_LD_aware ${haplocoded_resampled_tag_matbed} ${resampled_sample_list} \
 ${filter_proxization_vicinity_size} ${var_weight_prob} ${var2var_interaction_prob} ${var2var2var_interaction_prob} ${filter_weight_inversion_prob} \
 ${coding_modulus} ${normalized_N_e} ${filter_proxization_min_n_params_per_var} ${per_chrom_maps_dir} ${weight_params_file}
 
@@ -125,11 +159,11 @@ ${coding_modulus} ${normalized_N_e} ${filter_proxization_min_n_params_per_var} $
 		exit 1
 	fi
 
-# Filter proxize typed variants.
-haplocoded_resampled_proxy_tag_matbed=chr${CHR_ID}_Query_panel_haplocoded_resampled_proxy_tags.matbed.gz
-allele_err_eps=0
-N_THREADS=40
-ProxyTyper_Release -MT_proxize_variants_per_vicinity_non_linear_modular_average_per_var_custom_filters ${haplocoded_resampled_tag_matbed} ${resampled_sample_list} ${weight_params_file} ${allele_err_eps} ${N_THREADS} ${haplocoded_proxy_resampled_tag_matbed}
+	# Filter proxize typed variants.
+	haplocoded_resampled_proxy_tag_matbed=chr${CHR_ID}_Query_panel_haplocoded_resampled_proxy_tags.matbed.gz
+	allele_err_eps=0
+	N_THREADS=40
+	${PROXYTYPER_EXEC} -MT_proxize_variants_per_vicinity_non_linear_modular_average_per_var_custom_filters ${haplocoded_resampled_tag_matbed} ${resampled_sample_list} ${weight_params_file} ${allele_err_eps} ${N_THREADS} ${haplocoded_resampled_proxy_tag_matbed}
 
 	#####################################################################
 	# Coordinate anonymization: This applies to both tag and target variants. Note that this protects the variant positions and the genetic map.
@@ -143,19 +177,32 @@ ProxyTyper_Release -MT_proxize_variants_per_vicinity_non_linear_modular_average_
 	#10      .       0.000000        72765
 	rm -f -r ${anon_genetic_maps_dir}
 	mkdir ${anon_genetic_maps_dir}
-	ProxyTyper -anonymize_tag_target_genetic_map_coords tag_vars.bed target_vars.bed ${per_chrom_maps_dir}/${chr_id}.map ${coord_anon_cM_noise_SD} tag_target_mapping ${anon_genetic_maps_dir}
+	coord_anon_cM_noise_SD=0.05
+	${PROXYTYPER_EXEC} -anonymize_tag_target_genetic_map_coords tag_vars.bed target_vars.bed ${per_chrom_maps_dir}/${CHR_ID}.map ${coord_anon_cM_noise_SD} tag_target_mapping ${anon_genetic_maps_dir}
+
+	if [[ ! -f "${anon_genetic_maps_dir}/tag_target_mapping_original_coords.bed" ]]
+	then
+		echo "Could not find mapping coordinates: ${anon_genetic_maps_dir}/tag_target_mapping_original_coords.bed"
+		exit 1
+	fi
+
+	if [[ ! -f "${anon_genetic_maps_dir}/tag_target_mapping_mapping_coords.bed" ]]
+	then
+		echo "Could not find mapping coordinates: ${anon_genetic_maps_dir}/tag_target_mapping_mapping_coords.bed"
+		exit 1
+	fi
 
 	# Writet the beagle formatted genetic map file.
-	awk -v chr_id=${chr_id} {'if(NR>1){print chr_id"\t.\t"$3"\t"$1}'} ${anon_genetic_maps_dir}/${chr_id}.map > ${beagle_genetic_map_file} 
+	awk -v chr_id=${CHR_ID} {'if(NR>1){print chr_id"\t.\t"$3"\t"$1}'} ${anon_genetic_maps_dir}/${CHR_ID}.map > ${beagle_genetic_map_file} 
 
 	# Map the coordinates for both sites.
-	haplocoded_resampled_proxy_anon_coord_tag_matbed=chr${CHR_ID}_Query_panel_haplocoded_resampled_proxy_anon_coord_tags.matbed.gz
-	haplocoded_resampled_proxy_anon_coord_target_matbed=chr${CHR_ID}_Query_panel_haplocoded_resampled_proxy_anon_coord_targets.matbed.gz
+	haplocoded_resampled_proxy_anon_coord_tag_matbed=chr${CHR_ID}_query_panel_haplocoded_resampled_proxy_anon_coord_tags.matbed.gz
+	haplocoded_resampled_proxy_anon_coord_target_matbed=chr${CHR_ID}_query_panel_haplocoded_resampled_proxy_anon_coord_targets.matbed.gz
 
-	ProxyTyper -generic_map_genotype_regs_per_src_dest_regs ${haplocoded_resampled_proxy_tag_matbed} ${resampled_sample_list} ${anon_genetic_maps_dir}/tag_target_mapping_original_coords.bed ${anon_genetic_maps_dir}/tag_target_mapping_mapping_coords.bed ${haplocoded_resampled_proxy_anon_coord_tag_matbed}
+	${PROXYTYPER_EXEC} -generic_map_genotype_regs_per_src_dest_regs ${haplocoded_resampled_proxy_tag_matbed} ${resampled_sample_list} ${anon_genetic_maps_dir}/tag_target_mapping_original_coords.bed ${anon_genetic_maps_dir}/tag_target_mapping_mapping_coords.bed ${haplocoded_resampled_proxy_anon_coord_tag_matbed}
 
 	# Anonymize coordinates of target variants. Note that these are further permuted below.
-	ProxyTyper -generic_map_genotype_regs_per_src_dest_regs ${haplocoded_resampled_target_matbed} ${resampled_sample_list} ${anon_genetic_maps_dir}/tag_target_mapping_original_coords.bed ${anon_genetic_maps_dir}/tag_target_mapping_mapping_coords.bed ${haplocoded_resampled_proxy_anon_coord_target_matbed}
+	${PROXYTYPER_EXEC} -generic_map_genotype_regs_per_src_dest_regs ${haplocoded_resampled_target_matbed} ${resampled_sample_list} ${anon_genetic_maps_dir}/tag_target_mapping_original_coords.bed ${anon_genetic_maps_dir}/tag_target_mapping_mapping_coords.bed ${haplocoded_resampled_proxy_anon_coord_target_matbed}
 
 	#####################################################################
 	# Proxize the target variants by permutation: Note that this is done only at SITE2.
@@ -165,7 +212,9 @@ ProxyTyper_Release -MT_proxize_variants_per_vicinity_non_linear_modular_average_
 	haplocoded_resampled_anon_coord_permuted_target_matbed=${untyped_recoding_op_prefix}_proxized_targets.matbed.gz
 
 	# Recode the targets for the site2: Use the anon-coord for this since we are operating on anonymized coordinates.
-	ProxyTyper -recode_untyped_variant_reference_panel_per_target_permutation \
+	untyped_var_perm_n_vicinity=20
+	untyped_var_allele_switch_prob=0.5
+	${PROXYTYPER_EXEC} -recode_untyped_variant_reference_panel_per_target_permutation \
 ${haplocoded_resampled_proxy_anon_coord_tag_matbed} ${haplocoded_resampled_proxy_anon_coord_target_matbed} \
 ${resampled_sample_list} \
 ${untyped_var_perm_n_vicinity} \
@@ -185,15 +234,22 @@ ${untyped_recoding_op_prefix}
 		exit 1
 	fi
 
+	if [[ ! -f "${haplocoded_resampled_proxy_anon_coord_tag_matbed}" ]]
+	then
+		echo "Could not find encoded target genotypes @ \"${haplocoded_resampled_proxy_anon_coord_tag_matbed}\""
+		exit 1
+	fi
+
 	##########################################################################################
 	# Do partitioning of the untyped variants.
 	# Shuffling is always hardcoded to increase privacy.
 	shuffle_decomp_vars=1
+	variant_decomp_min_AAF=0.05
 
-	untyped_decomp_prefix="resampled_panel_target_anon_coord"
+	site2_untyped_decomp_prefix="resampled_panel_target_anon_coord"
 
 	# Decompose the current untyped variants, this does not change the typed variants, which are proxied above.
-	ProxyTyper -simple_decompose_untyped_variants ${haplocoded_resampled_proxy_anon_coord_tag_matbed} 
+	${PROXYTYPER_EXEC} -simple_decompose_untyped_variants ${haplocoded_resampled_proxy_anon_coord_tag_matbed} \
 ${haplocoded_resampled_anon_coord_permuted_target_matbed} \
 ${resampled_sample_list} \
 ${variant_decomp_min_AAF} \
@@ -213,6 +269,6 @@ ${shuffle_decomp_vars} ${site2_untyped_decomp_prefix}
 		echo "Could not find the decompose untyped genotypes file @ ${untyped_decomposed_target_matbed}"
 		exit 1
 	fi
-
+fi
 
 

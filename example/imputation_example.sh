@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ $# -lt 2 ]]
+if [[ $# -lt 1 ]]
 then
 	echo "$0 [Option] [Arguments]
 	-clean_directory
@@ -16,6 +16,7 @@ cmd_option=$1
 N_TYPED=16000
 N_REF_PANEL=2000
 PER_CHROM_MAPS_DIR=../../DATA/beagle_genetic_maps/genetic_maps
+PER_CHROM_BEAGLE_MAPS_DIR=../../beagle/genetic_maps/
 CHR_ID=22
 ASSEMBLY_ID=hg19
 PROXYTYPER_EXEC=ProxyTyper_Release
@@ -31,8 +32,6 @@ if [[ ${cmd_option} == "-clean_directory" ]]
 then
 	./ProxyTyper.sh -clean_directory ${PWD}
 
-	#svn update /internal/aharmanci1/dir/codebase/genomics-codebase/Genomics/ProxyTyper_Deployment
-	#cp /internal/aharmanci1/dir/codebase/genomics-codebase/Genomics/ProxyTyper_Deployment/scripts/*.sh .
 	git clone https://github.com/harmancilab/ProxyTyper.git
 
 	if [[ ! -d "ProxyTyper" ]]
@@ -42,6 +41,7 @@ then
 	fi
 
 	cp ProxyTyper/scripts/*.sh .
+	cp ProxyTyper/example/*.sh .
 	dos2unix.sh *.sh
 	chmod 755 *.sh
 
@@ -51,15 +51,19 @@ fi
 if [[ "${cmd_option}" == "-setup_reference_query_panels" ]]
 then
 	wget -c https://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
-	./ProxyTyper.sh -import_VCF ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz hg19 ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.matbed.gz
+	#./ProxyTyper.sh -import_VCF ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz hg19 ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.matbed.gz
 
 	# Calculate the allele frequencies.
 	ProxyTyper_Release -compute_AF_per_geno_signal_regions ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.matbed.gz ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz_sample_ids.list ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.matbed.gz_AFs.bed
 
-	awk {'if($5>0.05){print $0}'} ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.matbed.gz_AFs.bed | shuf | head -n ${N_TYPED} > tags.bed
+	awk 'BEGIN{FS="\t";OFS="\t"}{$4=$4"_"$5;print $0}'  ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.matbed.gz_AFs.bed > ALL_VAR_REGS.bed
 
-	ProxyTyper_Release -exclude ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz_var_regs.bed tags.bed n
-	mv excluded.bed targets.bed
+	awk {'if($5>0.05){print $0}'} ALL_VAR_REGS.bed | shuf | head -n ${N_TYPED} > tags.bed
+
+	ProxyTyper_Release -exclude ALL_VAR_REGS.bed tags.bed n
+	mv excluded.bed all_untyped.bed
+
+	awk {'if($5>=0.005){print $0}'} all_untyped.bed | shuf | head -n ${N_UNTYPED} > targets.bed
 
 	ProxyTyper_Release -extract_genotype_signals_per_region_list ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz.matbed.gz ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz_sample_ids.list tags.bed ALL.chr${CHR_ID}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz_haplocoded_tags.matbed.gz
 
@@ -84,10 +88,28 @@ then
 	Ref_Panel_haplocoded_target_matbed=chr${CHR_ID}_ref_panel_target_haplocoded.matbed.gz
 	ref_panel_sample_list=ref_panel_sample_ids.list
 
+	if [[ ! -f "${Ref_Panel_haplocoded_tag_matbed}" ]]
+	then
+		echo "Could not find ${Ref_Panel_haplocoded_tag_matbed}"
+		exit 1
+	fi
+
+	if [[ ! -f "${Ref_Panel_haplocoded_target_matbed}" ]]
+	then
+		echo "Could not find ${Ref_Panel_haplocoded_target_matbed}"
+		exit 1
+	fi
+
+	if [[ ! -f "${ref_panel_sample_list}" ]]
+	then
+		echo "Could not find ${ref_panel_sample_list}"
+		exit 1
+	fi
+
 	# First resample the reference panel typed+untyped variant genotypes.
 	per_chrom_maps_dir=${PER_CHROM_MAPS_DIR}
 	resampling_op_prefix=chr${CHR_ID}_ref_panel
-	resampled_size=`wc -l ${Query_panel_sample_list} | awk {'print 2*$1'}`
+	resampled_size=`wc -l ${ref_panel_sample_list} | awk {'print 2*$1'}`
 	N_e_frac=0.05
 	allele_eps=0
 	max_l_seg_n_bps=10000000
@@ -97,9 +119,9 @@ then
 	start_posn=0
 	end_posn=250000000
 
-	echo "Writing ${resampled_size}"
+	echo "Resampling reference typed+untyped panel to ${resampled_size} subjects.."
 
-	./ProxyTyper.sh -resample_tag_target_genotypes_w_length_cutoff ${Query_Panel_haplocoded_tag_matbed} ${Query_Panel_haplocoded_target_matbed} ${Query_panel_sample_list} \
+	./ProxyTyper.sh -resample_tag_target_genotypes_w_length_cutoff ${Ref_Panel_haplocoded_tag_matbed} ${Ref_Panel_haplocoded_target_matbed} ${ref_panel_sample_list} \
 ${resampled_size} ${per_chrom_maps_dir} ${N_e_frac} ${allele_eps} \
 ${max_l_seg_n_bps} ${max_l_seg_cM} ${max_l_seg_nvars} \
 ${n_threads} ${resampling_op_prefix} 
@@ -110,6 +132,24 @@ ${n_threads} ${resampling_op_prefix}
 	Query_Panel_haplocoded_tag_matbed=chr${CHR_ID}_query_panel_tag_haplocoded.matbed.gz
 	Query_Panel_haplocoded_target_matbed=chr${CHR_ID}_query_panel_target_haplocoded.matbed.gz
 	Query_panel_sample_list=query_panel_sample_ids.list
+
+	if [[ ! -f "${Query_Panel_haplocoded_tag_matbed}" ]]
+	then
+		echo "Could not find ${Query_Panel_haplocoded_tag_matbed}"
+		exit 1
+	fi
+
+	if [[ ! -f "${Query_Panel_haplocoded_target_matbed}" ]]
+	then
+		echo "Could not find ${Query_Panel_haplocoded_target_matbed}"
+		exit 1
+	fi
+
+	if [[ ! -f "${Query_panel_sample_list}" ]]
+	then
+		echo "Could not find ${Query_panel_sample_list}"
+		exit 1
+	fi
 
 	per_chrom_maps_dir=${PER_CHROM_MAPS_DIR}
 	resampling_op_prefix=chr${CHR_ID}_query_panel
@@ -123,7 +163,7 @@ ${n_threads} ${resampling_op_prefix}
 	start_posn=0
 	end_posn=250000000
 
-	echo "Writing ${resampled_size}"
+	echo "Resampling query typed panel to ${resampled_size} subjects.."
 
 	./ProxyTyper.sh -resample_query_genotypes_w_length_cutoff ${Query_Panel_haplocoded_tag_matbed} ${Query_panel_sample_list} \
 ${resampled_size} ${per_chrom_maps_dir} ${N_e_frac} ${allele_eps} \
@@ -135,7 +175,7 @@ ${n_threads} ${resampling_op_prefix}
 	exit 0 
 fi 
 
-if [[ "${cmd_option}" == "-resample_query_reference_panels" ]]
+if [[ "${cmd_option}" == "-do_imputation" ]]
 then
 
 	chr_id=${CHR_ID}
@@ -178,24 +218,30 @@ then
 
 	QUERY_haplocoded_tag_matbed=chr${CHR_ID}_query_panel_tag_haplocoded.matbed.gz
 	QUERY_haplocoded_target_matbed=chr${CHR_ID}_query_panel_target_haplocoded.matbed.gz
-	QUERY_sample_list=${PER_CHROM_SITE1_GENO_DATA_DIR}/site1_sample_ids.list
+	QUERY_sample_list=query_panel_sample_ids.list
 
 	QUERY_presampled_tag_matbed=chr${CHR_ID}_query_panel_resampled_tags.matbed.gz
-	QUERY_presampled_sample_list=chr${CHR_ID}_query_panel_resampled_samples.list
+	QUERY_presampled_sample_list=chr${CHR_ID}_query_panel_resampled_sample_ids.list
 
 	REFERENCE_haplocoded_tag_matbed=chr${CHR_ID}_ref_panel_tag_haplocoded.matbed.gz
 	REFERENCE_haplocoded_target_matbed=chr${CHR_ID}_ref_panel_target_haplocoded.matbed.gz
-	REFERENCE_sample_list=${PER_CHROM_SITE2_GENO_DATA_DIR}/site2_sample_ids.list
+	REFERENCE_sample_list=ref_panel_sample_ids.list
 
 	REFERENCE_presampled_tag_matbed=chr${CHR_ID}_ref_panel_resampled_tags.matbed.gz
 	REFERENCE_presampled_target_matbed=chr${CHR_ID}_ref_panel_resampled_targets.matbed.gz
-	REFERENCE_presampled_sample_list=chr${CHR_ID}_ref_panel_resampled_samples.list
+	REFERENCE_presampled_sample_list=chr${CHR_ID}_ref_panel_resampled_sample_ids.list
 
 	# Do central imputation on the current subjects.
 	RUN_CENTRAL_IMPUTATION=1
 	if [[ ${RUN_CENTRAL_IMPUTATION} == 1 ]]
 	then
-		beagle_genetic_map_file=${per_chrom_beagle_maps_dir}/plink.chr${chr_id}.GRCh37.map
+		beagle_genetic_map_file=${PER_CHROM_BEAGLE_MAPS_DIR}/plink.chr${chr_id}.GRCh37.map
+
+		if [[ ! -f ${beagle_genetic_map_file} ]]
+		then
+			echo "Could not find the genetic map @ \"${beagle_genetic_map_file}\""
+			exit 1
+		fi
 
 		echo "Performing central imputation without the proxy panels."
 		# Calculate the pure site2-based imputation accuracy.
