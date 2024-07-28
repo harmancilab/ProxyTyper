@@ -21,7 +21,7 @@ ProxyTyper makes use of numerous panel processing operations (i.e., mechanisms) 
 <li> **Panel Resampling**: Resampling is used for shuffling the haplotypes on phased panels to create "mosaic" of the original panel. *ProxyTyper* can resample panels to any desired number of subjects. The resampling can slightly change allele frequency distribution of the variants due to the random nature of sampling of the haplotypes. Panel resampling does not rely on the whether a variant is typed or untyped. 
 <li> **Typed variant genotype augmentation**: Augmentation aims to increase the number of typed variants and randomly place them in vicinity of original typed variants.
 <li> **Typed variant genotype hashing** Given a phased genotype panel, the alleles on each haplotype is hashed (or sometimes we call this "proxized") by binary combination of the surrounding variants. The variants that are used for hashing and their effect on hashing are randomly selected by ProxyTyper and stored in a *proxization model*.
-<li> **Typed variant permutation** 
+<li> **Typed variant permutation**: The typed/untyped variants are locally permuted while their genotypes are kept intact. 
 <li> **Untyped variant decomposition** Variants that are untyped constitute variants whose genotypes are imputed by the reference site. These variants are dominated by low frequency variants, especially in large panels. The untyped variant decomposition mechanism decomposes the high frequency untyped variants into new *proxy-variants*, which aims at hiding  
 <li> **Coordinate and Genetic Map Anonymization** Most attacks (Homer t-test, Bustamante beacon, Srirankaraman LRT-test) on genotype panels require matching between a reference panel and the pool panel. Thus, anonymizing the coordinates and genetic maps ensures that the coordinates of variants cannot be immediately mapped to the . Of note, BEAGLE does not make use of varaint coordinates if the genetic map is provided.
 </ol>
@@ -62,7 +62,7 @@ Typed variant augmentation and variant decomposition ProxyTyper makes use of mul
 
 # Executables 
 
-ProxyTyper is composed executables. The main script named *ProxyTyper.sh* is the front-end and implements each mechanism and the executable file *ProxyTyper_Release* implements the underlying functionalities that are used for generating the proxized panels. *ProxyTyper.sh* contains extensive error checks and input validation steps and should be the starting point for any user who wants to use existing protocols or design new imputation protocols using the protection mechanisms offered by ProxyTyper. It should be seamless to integrate *ProxyTyper.sh* into new pipelines.
+ProxyTyper is composed of two executables. The main script named *ProxyTyper.sh* is the front-end and implements each mechanism and the executable file *ProxyTyper_Release* implements the underlying functionalities that are used for generating the proxized panels. *ProxyTyper.sh* contains extensive error checks and input validation steps and should be the starting point for any user who wants to use existing protocols or design new imputation protocols using the protection mechanisms offered by ProxyTyper. It should be seamless to integrate *ProxyTyper.sh* into new pipelines.
 
 *ProxyTyper.ini* contains numerous options that are used for setting up the parameters needed by the different mechanisms. We will extensively review these scripts and implemented options in later examples. After building ProxyTyper, it is necessary that the executable under *bin/ProxyTyper* is included in the *$PATH*.
 
