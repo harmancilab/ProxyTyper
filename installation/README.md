@@ -34,4 +34,4 @@ After executable is built and installed, you can copy *ProxyTyper.sh* under the 
 which should show options to run *ProxyTyper.sh* and exit with no errors. 
 
 ---
-After installation, we recommend reviewing examples under *\exaamples* folder.
+After installation, we recommend reviewing examples under *\examples* folder.
