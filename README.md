@@ -17,7 +17,7 @@ ProxyTyper is not a genotype imputation tool. It relies on existing imputation s
 <li> Number of variants: Mechanisms can expand the typed and untyped variants to arbitrarily increase number of variants.
 <li> Variant coordinates: Mechanisms can anonymize the coordinates and genetic distances. 
 <li> Number of subjects: Mechanisms can resample phased panels to arbitrary number of subjects to generate proxy subjects who has mosaic genomes of original subjects.
-<li> Allele frequency spectrum of variants: Mechanisms can hash variant alleles in phased genomes and generate 
+<li> Allele frequency spectrum of variants: Mechanisms can hash variant alleles in phased genomes and generate new proxy variants, whose alleles frequencies are very different from the variants in the vicinity.
 </ol>
 Although proxy-panels differ from their original counter parts, they still look and feel like valid genotype panels and can be input to imputation software such as BEAGLE. Furthermore, they can be used to perform genotype imputation by using protocols that have small number of interactions.
 
