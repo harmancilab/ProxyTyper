@@ -28,7 +28,7 @@ N_REF_RESAMPLE_SIZE=10000
 ./Unphased_Protocol1.sh ${chr_id} ${N_REF_RESAMPLE_SIZE}
 ```
 
-**REMARK:** If it is not clear how to generate the appropriate panels, you can use the data setup script in Example 7, *example/7_Example_Imputation_Pipelines/Setup_Query_Ref_KG_data.sh* to set up these panels from 1000 Genomes Project data, which automatically downloads and sets up the necessary reference and query panels in appropriate names (also runs BEAGLE).
+**REMARK:** If it is not clear how to generate the appropriate panels, you can use the data setup script in Example 7, *examples/7_Example_Imputation_Pipelines/Setup_Query_Ref_KG_data.sh* to set up these panels from 1000 Genomes Project data, which automatically downloads and sets up the necessary reference and query panels in appropriate names (also runs BEAGLE).
 
 ---
 

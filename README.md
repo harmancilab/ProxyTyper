@@ -31,4 +31,4 @@ Under */protocols* directory, there are several complete protocols that implemen
 
 ---
 
-Please refer to the *example/* directory that runs the whole imputation protocol with the steps described in the manuscript.
+Please refer to the */examples* directory that runs the whole imputation protocol with the steps described in the manuscript.
