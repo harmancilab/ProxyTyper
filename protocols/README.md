@@ -32,4 +32,4 @@ N_REF_RESAMPLE_SIZE=10000
 
 ---
 
-We recommend with getting familiarized with running ProxyTyper's main script (*ProxyTyper.sh*) by reviewing the *example/* directory before running these scripts (you don't have to, obviously).
+We recommend with getting familiarized with running ProxyTyper's main script (*ProxyTyper.sh*) by reviewing the *examples/* directory before running these scripts (you don't have to, obviously).
