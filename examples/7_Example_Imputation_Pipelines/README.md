@@ -8,7 +8,7 @@ This pipeline uses only resampling, hashing, and coordinate anonymization mechan
 ## Unphased Query Pipeline
 Unphased pipelines are needed when the query site does not have access to phased genotypes. In this case, the query site cannot use allele hashing since there is no haplotype level information. ProxyTyper makes use of permutation mechanism more aggressively to permute typed variant positions. In addition, random biases are added to the typed variants. Reference site uses resampling and permutation mechanism (matching to the query site) to protect typed variants. The untyped variants are protected by the decomposition mechanism. Finally, both sites use coordinate anonymization.
 
-This protocol can be supplemented with typed variant augmentation at the beginning for further protection. Unphased 
+This protocol can be supplemented with typed variant augmentation at the beginning for further protection.  
 
 **REMARK:** Note that we have separated the configuration file for the phased protocol (*PHASED_PROXYTYPER.ini*) from the unphased protocol (*UNPHASED_PROXYTYPER.ini*). The difference in these protocols is in the allele hashing parameters. Also, in unphased protocol, the permutation window is larger and the higher permutation probability is used to introduce more typed variant permutations.
 

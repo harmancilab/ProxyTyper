@@ -11,7 +11,7 @@ This should list the options from ProxyTyper and quit. If not, there should be a
 
 ## Download 1kG Panel VCF File
 ```
-wget -c wget -c https://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr20.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
+wget -c https://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr20.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz
 ```
 
 ## Import VCF to ProxyTyper panel matrix format:
@@ -31,7 +31,7 @@ KG_chr_20_genotypes.matrix.gz   : Genotypes in a plain matrix.
 These three files should not be modified manually after they are created. We use ProxyTyper to process and proxize these panels as we will see in the later examples.
 
 ## ProxyTyper Uses Panel Identifiers to Easily Manage Flow of Genotype Panels in Proxizing Protocols
-ProxyTyper's protocols makes extensive use of identifier-based accession to the panels. We found this to be the easiest to manage the panels when protocols have many steps. The basic idea is to process each panel, save the result to a panel with an updated identifier, then update the current panel identifier to the new panel identifier. This way, we can easily track the names of panels as they flow through the protocols. Although ProxyTyper writes and reads many files underneath this process, the code simply processes and updates the panel identifiers. This 
+ProxyTyper's protocols makes extensive use of identifier-based accession to the panels. We found this to be the easiest to manage the panels when protocols have many steps. The basic idea is to process each panel, save the result to a panel with an updated identifier, then update the current panel identifier to the new panel identifier. This way, we can easily track the names of panels as they flow through the protocols. Although ProxyTyper writes and reads many files underneath this process, the code simply processes and updates the panel identifiers.  
 
 ##  Extract unique variants and Sort the Panel:
 The panel we imported contains some variants that share locations. We should filter these out:
