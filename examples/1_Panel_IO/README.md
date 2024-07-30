@@ -24,10 +24,12 @@ update_variant_ID=1
 ```
 Here, we first set the panel identifier. Next, we indicate that the panel is phased. Finally, we set a flag that tells the script to update variant identifiers with ref/alt allele and allele frequency information. After we VCF import is complete, you can see that ProxyTyper created 3 files whose names are specially formatted:
 ```
-KG_chr_20_variants.bed          : The variants in the panel.
-KG_chr_20_subjects.list         : Subjects list extracted from the VCF file.
-KG_chr_20_genotypes.matrix.gz   : Genotypes in a plain matrix.
+KG_chr20_variants.bed          : The variants in the panel.
+KG_chr20_subjects.list         : Subjects list extracted from the VCF file.
+KG_chr20_genotypes.matrix.gz   : Genotypes in a plain matrix.
 ```
+The three files named using the panel identifier (*KG_chr20*) as the prefix. The variant loci, subject identifiers, and genotype matrix files names are built by appending "_variants.bed", "_subjects.list", and "_genotypes.matrix.gz" to the panel identifier. ProxyTyper always gzip compresses the genotype matrix.
+
 These three files should not be modified manually after they are created. We use ProxyTyper to process and proxize these panels as we will see in the later examples.
 
 ## ProxyTyper Uses Panel Identifiers to Easily Manage Flow of Genotype Panels in Proxizing Protocols
