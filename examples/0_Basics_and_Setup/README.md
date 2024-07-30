@@ -25,7 +25,7 @@ ProxyTyper makes use of numerous panel processing operations (i.e., mechanisms) 
 <li> **Untyped variant decomposition** Variants that are untyped constitute variants whose genotypes are imputed by the reference site. These variants are dominated by low frequency variants, especially in large panels. The untyped variant decomposition mechanism decomposes the high frequency untyped variants into new *proxy-variants*, which hides the low frequency variants among proxy variants. 
 <li> **Coordinate and Genetic Map Anonymization** Most attacks (Homer t-test, Bustamante beacon, Srirankaraman LRT-test) on genotype panels require matching between a reference panel and the pool panel. Thus, anonymizing the coordinates and genetic maps ensures that the coordinates of variants cannot be immediately mapped to the . Of note, BEAGLE does not make use of varaint coordinates if the genetic map is provided.
 </ol>
-* *Throughout this documentation we may inadvertantly refer to typed variants as "tags" and untyped variants as "targets", we hope this does not create confusion.*
+* Throughout this documentation we may inadvertantly refer to typed variants as "tags" and untyped variants as "targets", we hope this does not create confusion.
 
 # Model-based Mechanisms Require Initializing Random Proxization Models
 
@@ -35,7 +35,7 @@ Among these mechanisms listed above; augmentation, hashing, permutation, anonymi
 
 Each mechanism processes and modifies a certain property of the input panel and *maps* them to a new domain. The new panel can then be input to other mechanisms. As such, we can feed the output from these mechanisms into each other to build new genotype proxization protocols. 
 
-As an example let's assume that the query site has a panel that contains 20,000 untyped variants and 10,000 subjects. We can use the following pipeline to generate a randomly proxized panel:
+As an example let's assume that the query site has a panel that contains 20,000 typed variants and 10,000 subjects. We can use the following pipeline to generate a randomly proxized panel:
 1. Resample the panel up-to 40,000 subjects:
  [20,000 variantx10,000 subjects]=> Resample => [20,000 variantx40,000 subjects]
 2. Augment the variants with 0.5 probability at each typed variant:
