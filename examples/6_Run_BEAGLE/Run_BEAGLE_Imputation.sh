@@ -22,7 +22,7 @@ fi
 source PROXYTYPER.ini
 
 # Download the BEAGLE jar file; this must match the version in PROXYTYPER.ini.
-wget -c https://faculty.washington.edu/browning/beagle/beagle.01Mar24.d36.jar
+wget -c https://faculty.washington.edu/browning/beagle/${BEAGLE_JAR}
 
 if [[ ! -f ${BEAGLE_JAR} ]]
 then

@@ -88,9 +88,10 @@ fi
 
 # this model is stored under ${MODELS_DIR} (defined in PROXYTYPER.ini file).
 # The parameters related to augmentation mechanism in PROXYTYPER.ini are as following:
-# n_tag_augments=3 : The number of times we will augment typed variants, this is cumulative, meaning the each augmentation starts from previous step's augmented typed variants.
-# tag_augmenter_probability=0.99 : Probability of augmenting any typed variant
-# tag_genotype_augmentation_type=1 : The type of genotype copy option. 0: Genotype is initialized as "0". 1: Genotype of augmented variants are copied from their "mates".
+# n_tag_augments=3                  : The number of times we will augment typed variants, this is cumulative, meaning the each augmentation starts from previous step's augmented typed variants.
+# tag_augmenter_probability=0.99    : Probability of augmenting any typed variant
+# n_tags_per_augment_vicinity=0     : The number of tags in the vicinity to augment each typed variant. For typed variant i; a new proxy typed variant is augmented within [i-n_vic, i+n_vic] block.
+# tag_genotype_augmentation_type=1  : The type of genotype copy option. 0: Genotype is initialized as "0". 1: Genotype of augmented variants are copied from their "mates".
 ##################################################################################################
 # Now we can augment the tag variants:
 ./ProxyTyper.sh -augment_tag_variants ${TYPED_VARIANTS_PANEL_ID} ${TYPED_VARIANTS_PANEL_ID}_tag_augmented

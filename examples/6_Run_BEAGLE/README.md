@@ -2,6 +2,12 @@
 
 BEAGLE is a highly popular and well maintained genotype imputation method that performs phasing and imputation in one package <span style="font-size:10px;">(yes, we do believe it is pretty awesome.)</span>. ProxyTyper uses BEAGLE as the default imputation method. ProxyTyper implements the options to run BEAGLE automatically with one command. This process should, in principle, take place at the imputation server. When resampling is used at the query site, it is necessary to perform a local imputation at the query site to estimate the imputed genotypes for the query subjects. 
 
+Before running this example, make sure there is a java interpreter installed on the system:
+```
+java --version
+```
+This command should run and return the version that is used with java.
+
 Given the proxized reference and query panels (with all mechanisms that we discussed in previous examples applied), we simulate running BEAGLE on the imputation server with the following command:
 ```
 QUERY_PANEL_ID=QUERY_proxy
