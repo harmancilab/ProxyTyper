@@ -16,6 +16,8 @@ Most of the models are extended BED files that describe permutations of coordina
 ## Typed Variant Augmentation
 Augmentation increases the number of typed variants by flipping a coin at each typed variant and selecting (or skipping it) to add it to the vicinity of the current typed variant. The position is selected by choosing a random location between current variant and previous variant ensuring that it does not overlap with any of the typed or untyped variants. 
 
+<p align="center"><img src="../../imgs/Fig2.jpg" alt="Image 1" width="300"></p>
+
 Starting from a panel, it is first necessary to build the augmentation model:
 ```
 ./ProxyTyper.sh -generate_tag_augmenter_model TYPED_VARIANTS.bed ALL_VARIANTS.bed
@@ -51,6 +53,8 @@ tag_genotype_augmentation_type=1    : The type of genotype copying in augmentati
 
 ## Local Hash Encoding of Typed Variant Alleles
 Given a phased (or randomly phased) panel, ProxyTyper protects the genotypes of each typed variant by locally hashing the alleles using the alleles around the variant. 
+
+<p align="center"><img src="../../imgs/Fig8.jpg" alt="Image 1" width="500"></p>
 
 This is performed using a modular-2 combination of alelles:
 ```
@@ -92,6 +96,8 @@ filter_proxization_min_n_params_per_var=2   : Hard cutoff on the number of minim
 
 ## Local Permutation of Typed Variants
 Local permutation mechanism permutes variants to new locations. This is a very strong protection mechanism because it breaks the continuity of the variants from publicly available reference panels. For instance, if we augment variants then locally permute them, we will get a fairly convoluted version of the original set of variants, which are also expanded to a new size.
+
+<p align="center"><img src="../../imgs/Fig4.jpg" alt="Image 1" width="300"></p>
 
 In a nutshell, permutation slides a window over the typed variants. At each window, it flips a coin and permutes all typed variants in the window if the coin tossed heads (this is a biased coin that we define in configuration file).
 

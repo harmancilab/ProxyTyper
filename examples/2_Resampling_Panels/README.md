@@ -9,6 +9,8 @@ Using ProxyTyper, the query and reference panels can be resampled to higher samp
 ## How does ProxyTyper resample haplotypes?
 ProxyTyper uses a Markov chain-based approach to randomly select a haplotype at "anchor" sites. The anchor sites refer to variants where we can perform a haplotype switch. For large panels with millions of variants, choosing anchor sites has very low impact on the quality of resampled panels and decreases the computational burden on ProxyTyper. By default, ProxyTyper selects variants that are at least 0.005 cM away from each other as anchor sites. Even with this small distance, the computation becomes much more computationally efficient. 
 
+<p align="center"><img src="../../imgs/Fig3.jpg" alt="Image 1" width="500"></p>
+
 ## How is Resampling related between Query and Reference Panels?
 They are not related at all. Resampling is done at each site locally and independent of other sites. Sites do not have to expect any input from other site to perform resampling. This is why resampling is almost always one of the first steps in the protocols. 
 
