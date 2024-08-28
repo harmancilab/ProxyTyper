@@ -5,7 +5,7 @@
 # Make sure the script is here.
 if [[ ! -f "ProxyTyper.sh" ]]
 then
-    echo "Could not find ProxyTyper script @ \"ProxyTyper.sh}\", you can it copy it from under scripts/ directory.."
+    echo "Could not find ProxyTyper script @ \"ProxyTyper.sh\", you can it copy it from under scripts/ directory.."
     exit 1
 fi
 
