@@ -818,6 +818,26 @@ Misc:\n\
 
 		exit(0);
 	} // -intersect option.
+	else if (t_string::compare_strings(argv[1], "-build_augmenting_variants_mapper_custom_vicinity"))
+	{
+		if (argc != 7)
+		{
+			fprintf(stderr, "USAGE: %s %s [Augmenting variants BED] [Panel variants (all variants) BED] [# augmentation vicinity variants] [Augmentation probability (0-1)] [Augmentation mapper prefix]\n",
+				argv[0], argv[1]);
+			exit(1);
+		}
+
+		char* augmenting_variants_BED_fp = argv[2];
+		char* panel_variants_BED_fp = argv[3];
+		int n_vicinity_vars = atoi(argv[4]);
+		double augment_prob = atof(argv[5]);
+		char* augmentation_mapper_op_prefix = argv[6];
+
+		build_augmenting_variants_mapper_custom_vicinity(augmenting_variants_BED_fp, panel_variants_BED_fp,
+			n_vicinity_vars,
+			augment_prob,
+			augmentation_mapper_op_prefix);
+	} // -build_augmenting_variants_mapper_custom_vicinity option.
 	else if (t_string::compare_strings(argv[1], "-build_augmenting_variants_mapper"))
 	{
 		if (argc != 6)

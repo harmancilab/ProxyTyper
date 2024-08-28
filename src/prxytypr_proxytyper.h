@@ -79,6 +79,11 @@ void build_augmenting_variants_mapper(char* augmenting_variants_BED_fp, char* pa
 void augment_tag_variants(char* augmentation_mapper_prefix, char* haplocoded_geno_signal_fp, char* sample_ids_list_fp,
 	int geno_augment_type, char* op_matbed);
 
+void build_augmenting_variants_mapper_custom_vicinity(char* augmenting_variants_BED_fp, char* panel_variants_BED_fp,
+	int n_vicinity_vars,
+	double augment_prob,
+	char* augmentation_mapper_op_prefix);
+
 void get_untyped_variant_LD_statistics(char* typed_var_geno_sig_regs_fp, char* untyped_var_geno_sig_regs_fp, char* panel_sample_list_fp, int n_blocks_2_process, char* op_prefix);
 
 void get_consecutive_block_variant_correlations(char* panel_target_geno_sig_regs_fp, char* panel_sample_list_fp, int l_block, int l_step, char* op_fp);

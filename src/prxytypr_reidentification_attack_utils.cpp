@@ -2776,7 +2776,7 @@ void pool_summarize_Sankararaman_LRT_statistics_per_query(char* per_query_per_va
 	vector<double>*** per_sample_per_hap_per_file_LRT_stats = new vector<double>**[(int)sample_ids->size() + 2];
 	for (int i_s = 0; i_s < (int)sample_ids->size(); i_s++)
 	{
-		per_sample_per_hap_per_file_LRT_stats[i_s] = new vector<double>*();
+		per_sample_per_hap_per_file_LRT_stats[i_s] = new vector<double>*[2];
 		for (int i_hap = 0; i_hap < 2; i_hap++)
 		{
 			per_sample_per_hap_per_file_LRT_stats[i_s][i_hap] = new vector<double>();

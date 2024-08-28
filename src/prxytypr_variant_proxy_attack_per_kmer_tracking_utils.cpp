@@ -1529,8 +1529,8 @@ Variant range: [%d-%d]\n", query_original_haplocoded_geno_fp, query_proxized_hap
 				delete(per_win_per_unique_ref_kmer_cnts[i_var]);
 			} // i_var loop.
 
-			delete per_win_unique_ref_kmers;
-			delete per_win_per_unique_ref_kmer_cnts;
+			delete[] per_win_unique_ref_kmers;
+			delete[] per_win_per_unique_ref_kmer_cnts;
 			delete[] per_win_query_proxy_kmer_freq;
 			delete[] per_win_backtracking_kmer_i;
 			delete[] per_win_n_ref_kmers;

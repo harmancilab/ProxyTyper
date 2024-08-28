@@ -1971,8 +1971,7 @@ void extract_genotype_signals_per_VCF_memoptimized(char* vcf_fp,							// This i
 				// Do we need to have name matching?
 				bool name_check_pass = true;
 				if (match_region_names_flag &&
-					var_regs_per_cur_chr->at(i_leftmost_reg)->name != NULL &&
-					id != NULL)
+					var_regs_per_cur_chr->at(i_leftmost_reg)->name != NULL)
 				{
 					int i_char = 0;
 

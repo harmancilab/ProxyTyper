@@ -1278,7 +1278,16 @@ then
         # wc ${tag_vars_BED} ${all_panel_vars_BED}
         
         cur_iter_prefix=${TAG_AUGMENTER_PREFIX}_${aug_i}
-        ${PROXYTYPER_EXEC} -build_augmenting_variants_mapper ${tag_vars_BED} ${all_panel_vars_BED} ${tag_augmenter_probability} ${cur_iter_prefix}
+
+        if [[ ${n_tags_per_augment_vicinity} -eq 0 ]]
+        then
+            echo "Using consecutive tags variants for augmentation blocks.."
+            ${PROXYTYPER_EXEC} -build_augmenting_variants_mapper ${tag_vars_BED} ${all_panel_vars_BED} ${tag_augmenter_probability} ${cur_iter_prefix}
+        else
+            echo "Using [-${n_tags_per_augment_vicinity}/+${n_tags_per_augment_vicinity}] for augmentation blocks.."
+            ${PROXYTYPER_EXEC} -build_augmenting_variants_mapper_custom_vicinity ${tag_vars_BED} ${all_panel_vars_BED} ${n_tags_per_augment_vicinity} ${tag_augmenter_probability} ${cur_iter_prefix}
+        fi
+
         if [[ $? -ne 0 ]]
         then
             echo "Sanity check failed (${LINENO})"

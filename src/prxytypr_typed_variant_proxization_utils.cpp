@@ -482,6 +482,112 @@ vector<t_annot_region*>* load_tag_permute_proxy_mapping_regs(char* permute_proxy
 	return(perm_var_orig_regs);
 }
 
+void build_augmenting_variants_mapper_custom_vicinity(char* augmenting_variants_BED_fp, char* panel_variants_BED_fp, 
+	int n_vicinity_vars,
+	double augment_prob, 
+	char* augmentation_mapper_op_prefix)
+{
+	fprintf(stderr, "Building tag augmenter model with %.3f probability in [-%d/+%d] vicinity..\n", augment_prob, n_vicinity_vars, n_vicinity_vars);
+
+	t_rng* rng = new t_rng(t_seed_manager::seed_me());
+
+	vector<t_annot_region*>* augmenting_var_regs = load_BED(augmenting_variants_BED_fp);
+	sort(augmenting_var_regs->begin(), augmenting_var_regs->end(), sort_regions);
+	fprintf(stderr, "Loaded %d augmenting variant regions.\n", vecsize(augmenting_var_regs));
+
+	vector<t_annot_region*>* panel_var_regs = load_BED(panel_variants_BED_fp);
+	fprintf(stderr, "Loaded %d whole panel variant regions.\n", vecsize(panel_var_regs));
+	sort(panel_var_regs->begin(), panel_var_regs->end(), sort_regions);
+	int l_indicator = (size_t)250 * (size_t)1000 * (size_t)1000;
+	char* panel_var_posn_indicator = new char[l_indicator];
+	memset(panel_var_posn_indicator, 0, sizeof(char) * l_indicator);
+	for (int i_reg = 0; i_reg < vecsize(panel_var_regs); i_reg++)
+	{
+		panel_var_regs->at(i_reg)->score = i_reg;
+		panel_var_posn_indicator[panel_var_regs->at(i_reg)->start] = 1;
+	} // i_reg loop.
+
+	vector<t_annot_region*>* intersects = intersect_annot_regions(panel_var_regs, augmenting_var_regs, false);
+	if (intersects->size() != augmenting_var_regs->size())
+	{
+		fprintf(stderr, "The augmenting variants do not completely overlap: %d/%d\n", vecsize(intersects), vecsize(augmenting_var_regs));
+		exit(1);
+	}
+
+	// Place the augmenting regions.
+	char original_augmenting_regs_BED_fp[1000];
+	sprintf(original_augmenting_regs_BED_fp, "%s_original.bed", augmentation_mapper_op_prefix);
+	char mapped_augmenting_regs_BED_fp[1000];
+	sprintf(mapped_augmenting_regs_BED_fp, "%s_mapped.bed", augmentation_mapper_op_prefix);
+
+	FILE* f_original_augmenting_regs_BED = open_f(original_augmenting_regs_BED_fp, "w");
+	FILE* f_mapped_augmenting_regs_BED = open_f(mapped_augmenting_regs_BED_fp, "w");
+	int n_augmenting_vars = 0;
+	for (int i_reg = 0; i_reg < vecsize(augmenting_var_regs); i_reg++)
+	{
+		//int panel_reg_i = augmenting_var_regs->at(i_reg)->score;
+		if (rng->random_double_ran3() < augment_prob)
+		{
+			//int cur_augment_reg_posn = augmenting_var_regs->at(i_reg)->start;
+
+			int vic_start_augment_reg_posn = augmenting_var_regs->at(0)->start;
+			int vic_end_augment_reg_posn = augmenting_var_regs->back()->start;
+			if (i_reg > n_vicinity_vars)
+			{
+				//prev_augment_reg_posn = augmenting_var_regs->at(i_reg - 1)->start;
+				vic_start_augment_reg_posn = augmenting_var_regs->at(i_reg - n_vicinity_vars)->start;
+			}
+
+			if ((i_reg + n_vicinity_vars) < vecsize(augmenting_var_regs))
+			{
+				//prev_augment_reg_posn = augmenting_var_regs->at(i_reg - 1)->start;
+				vic_end_augment_reg_posn = augmenting_var_regs->at(i_reg + n_vicinity_vars)->start;
+			}
+
+			//if ((cur_augment_reg_posn - prev_augment_reg_posn) > 100)
+			if(vic_end_augment_reg_posn - vic_start_augment_reg_posn > 100)
+			{
+				// Find a position that does not have any panel variants.
+				//int posn_candidate = int(prev_augment_reg_posn + (cur_augment_reg_posn - prev_augment_reg_posn) * rng->random_double_ran3());
+				int posn_candidate = int(vic_start_augment_reg_posn + (vic_end_augment_reg_posn - vic_start_augment_reg_posn) * rng->random_double_ran3());
+				while (panel_var_posn_indicator[posn_candidate] == 1)
+				{
+					//posn_candidate = int(prev_augment_reg_posn + (cur_augment_reg_posn - prev_augment_reg_posn) * rng->random_double_ran3());
+					posn_candidate = int(vic_start_augment_reg_posn + (vic_end_augment_reg_posn - vic_start_augment_reg_posn) * rng->random_double_ran3());
+				} // position searching loop.
+
+				// Set this position as 1 since we will add new variants down stream; this is not used in original augmenter.
+				panel_var_posn_indicator[posn_candidate] = 1;
+
+				if (__DUMP_PROXIZATION_MSGS__)
+				{
+					fprintf(stderr, "Augmenting var-%d: %s:%d-%d ;; selected posn_candidate=%d\n", i_reg,
+						augmenting_var_regs->at(i_reg)->chrom, augmenting_var_regs->at(i_reg)->start, augmenting_var_regs->at(i_reg)->end,
+						posn_candidate);
+				}
+
+				fprintf(f_original_augmenting_regs_BED, "%s\t%d\t%d\t%s\t.\t+\n", augmenting_var_regs->at(i_reg)->chrom,
+					translate_coord(augmenting_var_regs->at(i_reg)->start, CODEBASE_COORDS::start_base, BED_COORDS::start_base),
+					translate_coord(augmenting_var_regs->at(i_reg)->end, CODEBASE_COORDS::end_base, BED_COORDS::end_base),
+					augmenting_var_regs->at(i_reg)->name);
+
+				fprintf(f_mapped_augmenting_regs_BED, "%s\t%d\t%d\t%s_AUGMENTED_%d\t+\n", augmenting_var_regs->at(i_reg)->chrom,
+					translate_coord(posn_candidate, CODEBASE_COORDS::start_base, BED_COORDS::start_base),
+					translate_coord(posn_candidate, CODEBASE_COORDS::end_base, BED_COORDS::end_base),
+					augmenting_var_regs->at(i_reg)->name, i_reg);
+
+				n_augmenting_vars++;
+			}
+		} // probability check.
+	} // i_reg loop.	
+
+	close_f(f_mapped_augmenting_regs_BED, NULL);
+	close_f(f_original_augmenting_regs_BED, NULL);
+
+	fprintf(stderr, "Saved %d augmenting tag variants..\n", n_augmenting_vars);
+} // build_augmenting_variants_mapper_custom_vicinity function.
+
+
 void build_augmenting_variants_mapper(char* augmenting_variants_BED_fp, char* panel_variants_BED_fp, double augment_prob, char* augmentation_mapper_op_prefix)
 {
 	fprintf(stderr, "Building tag augmenter model with %.3f probability..\n", augment_prob);
