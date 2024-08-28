@@ -2,6 +2,12 @@
 
 In this folder, we include a phased and an unphased imputation protocol as two complete protocols. These protocols are implemented in *Phased_Hashing_Only_Protocol.sh* and *Unphased_Resampling_Only_Protocol.sh*. For simplicity, we separated data extraction step into another script named *Setup_Query_Ref_KG_data.sh*, which processes chromosome 20 from The 1000 Genomes Project.
 
+## Requirements
+Before running the pipelines, it is also necessary to install */usr/bin/time* command for saving time/memory usage of the steps of the protocol. This executable is not a part of ProxyTyper but it is useful to have for collecting resource usage. This executable is a part of the GNU *time* utility and can be installed using:
+```
+apt-get install time
+```
+
 ## Phased Query Pipeline
 This pipeline uses only resampling, hashing, and coordinate anonymization mechanisms. Reference site uses untyped variant decomposition to protect untyped variants. The mechanisms that we previously reviewed are implemented in a sequential pipeline. 
 
