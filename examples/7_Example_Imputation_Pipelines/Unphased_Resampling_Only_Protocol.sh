@@ -17,9 +17,15 @@ then
     exit 1
 fi
 
+# Make sure the script is here.
+if [[ ! -f "ProxyTyper.sh" ]]
+then
+    echo "Could not find ProxyTyper script @ \"ProxyTyper.sh\", you can it copy it from under scripts/ directory.."
+    exit 1
+fi
+
 chr_id=$1
 n_REF_resample=$2
-
 
 echo "Starting $0 on chromosome=${chr_id}; Ref. resampling=${n_REF_resample}"
 
