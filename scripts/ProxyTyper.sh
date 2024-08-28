@@ -2258,7 +2258,7 @@ then
         echo "Could not find fetchChromSizes, attempting to download from UCSC Genome Browser @ https://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/fetchChromSizes ..."
         wget -c https://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/fetchChromSizes
         chmod 755 fetchChromSizes
-        fetchChromSizes_EXEC=./fetchChromSizes_EXEC
+        fetchChromSizes_EXEC=./fetchChromSizes
 
         echo "Checking again.."
         exec_check=`type -P ${fetchChromSizes_EXEC}`

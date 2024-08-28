@@ -2,9 +2,18 @@
 
 ProxyTyper contains an executable (*bin/ProxyTyper_Release*) and a bash script (*scripts/ProxyTyper.sh*) that implements the user-facing options using the executable.
 
+## Clone the Repository
+First, we need to clone the git repository:
+```
+git clone https://github.com/harmancilab/ProxyTyper.git
+```
+
+
+
 ## Building *ProxyTyper_Release*
 To build the executable, run the following commands under ProxyTyper's main directory:
 ```
+cd ProxyTyper
 make clean
 make
 ```
