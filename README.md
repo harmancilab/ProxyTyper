@@ -3,9 +3,12 @@
 This repository contains the source code and related documentation for ProxyTyper, which is a tool for building privacy-preserving genotype imputation protocols. 
 
 ## Introduction
+
 Genotype imputation is the process of filling the missing genotypes of one panel (*query panel*) by using another *more complete* panel, i.e., a reference panel. Genotype imputation is a fundamental step in many genetic analysis software and pipelines, e.g., genomewide association studies. Genotype imputation tools such as *BEAGLE* and *minimac4* use sparsely genotyped (i.e., *typed*) variants from, for example, genotyping arrays and impute variants that were untyped in the query panel.To achieve this, these tools use a reference panel that contains a large number of variants, overlap the typed variants in the client's panel, and impute the remaining variants that were untyped. Since reference panel contains very large number of subjects, these are generally not shareable due to privacy concerns. Also, genotype imputation is a computationally resource intensive process. To circumvent these issues, imputation servers can help: Users (i.e., querying sites) upload the typed variant panels to the servers, and servers impute the untyped variants and return results to the querying site. 
 
 **There could be numerous privacy concerns here**, for instance query site sends the panel in clearly visible format. Also, the imputation server stores the reference panel clearly visible format. Returning the untyped variants to the query site without subject to any privacy policy can also lead to several privacy concerns.
+
+<p align="center"><img src="imgs/Fig1.jpg" alt="Image 1" width="300"></p>
 
 **There is generally a 3rd party that is unacknowledged in imputation process**, which is the data owners of the reference panel. This is because the reference panels are generally collected from large sequencing efforts that are not directly related to the imputation servers, which are using the reference panel potentially as a 3rd party. Any risk and/or threat factor/model/actor should be communicated to and considered by the data owners. In summary, it is important to include data owners as an active entity in the outsourcing of genotype imputation. 
 
