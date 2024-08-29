@@ -31,7 +31,3 @@ Please follow the steps under */installation* to install and setup ProxyTyper.
 After installing ProxyTyper, you can start reviewing the examples under */examples* directory. There are numerous examples and descriptions in these folders that should familiarize users with the mechanisms, scripting patterns, and building protocols with ProxyTyper.
 
 Under */protocols* directory, there are several complete protocols that implement imputation. 
-
----
-
-Please refer to the */examples* directory that runs the whole imputation protocol with the steps described in the manuscript.
