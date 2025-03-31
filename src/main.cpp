@@ -99,6 +99,7 @@ Misc:\n\
 	-extract_genotype_signals_per_VCF_no_buffer_multithreaded\n\
 	-validate_system\n\
 	-get_R2_per_imputed_genotypes\n\
+	-get_max_genotype_value\n\
 	-get_query_haplotype_frequency_per_reference\n\
 	-locally_permute_indices\n\
 	-get_per_window_sampling_probability_per_reference\n\
@@ -111,7 +112,24 @@ Misc:\n\
 	clock_t start_c = clock();
 	time_t start_t = time(NULL);
 
-	if (strcmp(argv[1], "-random_phase_genotypes") == 0)
+	if (strcmp(argv[1], "-get_max_genotype_value") == 0)
+	{
+		if (argc != 4)
+		{
+			fprintf(stderr, "USAGE: %s %s [Genotypes regions file path] [sample ids list]\n", argv[0], argv[1]);
+			exit(1);
+		}
+
+		char* geno_sig_regs_fp = argv[2];
+		char* sample_ids_list_fp = argv[3];
+
+		vector<t_annot_region*>* geno_sig_regs = load_variant_signal_regions_wrapper(geno_sig_regs_fp, sample_ids_list_fp);
+		vector<char*>* sample_ids = buffer_file(sample_ids_list_fp);
+		int max_coded_geno = get_max_genotype_value(geno_sig_regs, sample_ids);
+
+		fprintf(stdout, "%d", max_coded_geno);
+	} // -get_max_genotype_value option.
+	else if (strcmp(argv[1], "-random_phase_genotypes") == 0)
 	{
 		if (argc != 5)
 		{
@@ -504,9 +522,18 @@ Misc:\n\
 
 		fprintf(stderr, "Loaded %d regions on %d subjects, sorting and saving..\n", vecsize(geno_sig_regs), vecsize(sample_ids));
 
-		sort(geno_sig_regs->begin(), geno_sig_regs->end(), sort_regions);
+		t_restr_annot_region_list* restr_geno_regs = restructure_annot_regions(geno_sig_regs);
 
-		binarize_variant_signal_regions_wrapper(geno_sig_regs, sample_ids, op_fp);
+		// Get unique regions on each chromosome separately.
+		vector<t_annot_region*>* sorted_coord_regs = new vector<t_annot_region*>();
+		for (int i_chr = 0; i_chr < vecsize(restr_geno_regs->chr_ids); i_chr++)
+		{
+			fprintf(stderr, "Sorted %s: %d\n", restr_geno_regs->chr_ids->at(i_chr), vecsize(restr_geno_regs->regions_per_chrom[i_chr]));
+			vector<t_annot_region*>* cur_chr_cat_regs = restr_geno_regs->regions_per_chrom[i_chr];
+			sorted_coord_regs->insert(sorted_coord_regs->end(), cur_chr_cat_regs->begin(), cur_chr_cat_regs->end());
+		} // i_chr loop.
+
+		binarize_variant_signal_regions_wrapper(sorted_coord_regs, sample_ids, op_fp);
 	} // -sort_genosignal_matrix option.
 	else if (strcmp(argv[1], "-dump_plain_haplo_signal_regions") == 0)
 	{
@@ -672,24 +699,34 @@ Misc:\n\
 		vector<char*>* sample_ids = buffer_file(sample_ids_list_fp);
 		vector<t_annot_region*>* haplocoded_geno_regs = load_variant_signal_regions_wrapper(haplocoded_geno_sig_regs_fp, sample_ids_list_fp);
 
-		fprintf(stderr, "Loaded %d haplocoded genotype regions for %d samples.\n", (int)haplocoded_geno_regs->size(), (int)sample_ids->size());
-
-		for (int i_reg = 0; i_reg < (int)haplocoded_geno_regs->size(); i_reg++)
+		if (get_max_genotype_value(haplocoded_geno_regs, sample_ids) == 3)
 		{
-			void** cur_reg_info = (void**)(haplocoded_geno_regs->at(i_reg)->data);
-			char* haplocoded_geno_sigs = (char*)(cur_reg_info[0]);
+			fprintf(stderr, "Loaded %d haplocoded genotype regions for %d samples.\n", (int)haplocoded_geno_regs->size(), (int)sample_ids->size());
 
-			for (int i_s = 0; i_s < (int)sample_ids->size(); i_s++)
+			for (int i_reg = 0; i_reg < (int)haplocoded_geno_regs->size(); i_reg++)
 			{
-				int genocoded_geno = get_genotype_per_haplocoded_genotype(haplocoded_geno_sigs[i_s]);
-				haplocoded_geno_sigs[i_s] = genocoded_geno;
-			} // i_s loop.
-		} // i_reg loop.
+				void** cur_reg_info = (void**)(haplocoded_geno_regs->at(i_reg)->data);
+				char* haplocoded_geno_sigs = (char*)(cur_reg_info[0]);
 
-		// Save.
-		fprintf(stderr, "Saving to %s.\n", op_matbed_fp);
-		//binarize_variant_genotype_signal_regions(haplocoded_geno_regs, NULL, sample_ids, op_matbed_fp);
-		binarize_variant_signal_regions_wrapper(haplocoded_geno_regs, sample_ids, op_matbed_fp);
+				for (int i_s = 0; i_s < (int)sample_ids->size(); i_s++)
+				{
+					int genocoded_geno = get_genotype_per_haplocoded_genotype(haplocoded_geno_sigs[i_s]);
+					haplocoded_geno_sigs[i_s] = genocoded_geno;
+				} // i_s loop.
+			} // i_reg loop.
+
+			// Save.
+			fprintf(stderr, "Saving to %s.\n", op_matbed_fp);
+			//binarize_variant_genotype_signal_regions(haplocoded_geno_regs, NULL, sample_ids, op_matbed_fp);
+			binarize_variant_signal_regions_wrapper(haplocoded_geno_regs, sample_ids, op_matbed_fp);
+		}
+		else
+		{
+			fprintf(stderr, "***WARNING::Seems like the panel is already unphased, will just copy it..***\n");
+			fprintf(stderr, "***WARNING::Seems like the panel is already unphased, will just copy it..***\n");
+			fprintf(stderr, "***WARNING::Seems like the panel is already unphased, will just copy it..***\n");
+			binarize_variant_signal_regions_wrapper(haplocoded_geno_regs, sample_ids, op_matbed_fp);
+		}
 
 		exit(0);
 	} // -convert_haplocoded_2_genocoded option.
@@ -1072,7 +1109,6 @@ Misc:\n\
 		char* f_op = argv[5];
 		get_allele_error_per_decoded_panel_known_panel(decoded_panel_matbed_fp, known_panel_matbed_fp, sample_ids_list_fp, f_op);
 	}
-
 	else if (t_string::compare_strings(argv[1], "-calculate_haplotype_emission_probabilities_per_reference_Full_States_multithreaded"))
 	{
 		if (argc != 12)
@@ -1188,8 +1224,6 @@ Misc:\n\
 			N_e, allele_eps,
 			fore_back_output_fp);
 	} // -calculate_haplotype_emission_probabilities_per_reference_Full_States option.
-
-
 	else if (t_string::compare_strings(argv[1], "-get_R2_per_imputed_genotypes"))
 	{
 		if (argc != 6)
@@ -1632,7 +1666,6 @@ Misc:\n\
 		anonymize_tag_target_genetic_map_coordinates_per_ref_query_variants(tag_variants_BED_fp, tag_target_variants_BED_fp,
 																			genetic_map_file, cM_noise_SD, max_base_posn, op_dir);
 	} // -anonymize_tag_target_genetic_map_coords
-
 	else if (t_string::compare_strings(argv[1], "-anonymize_tag_target_genetic_map_coords"))
 	{
 		if (argc != 8)
@@ -2639,6 +2672,97 @@ Misc:\n\
 
 		summarize_sampled_segments_per_resampled_haplotype_info(resampling_hap_info_sigbed_fp, resampling_sample_list_fp, generating_sample_list_fp, op_fp);
 	} // summarize_sampled_segments_per_resampled_haplotype_info option.	
+	else if (t_string::compare_strings(argv[1], "-concat_variant_wide_genotype_signal_regions_per_list"))
+	{
+		if (argc != 6)
+		{
+			fprintf(stderr, "USAGE: %s -concat_variant_wide_genotype_signal_regions_per_list \
+[Matbed files list file] [Sample IDs list file] \
+[Remove unique variants? (0/1)] \
+[Output file]\n", argv[0]);
+			exit(1);
+		}
+
+		char* matbed_file_list_fp = argv[2];
+		char* sample_list_fp = argv[3];
+		bool remove_unique_coord_vars_flag = (bool)(atoi(argv[4]) == 1);
+		char* op_fp = argv[5];
+
+		concat_variant_wide_genotype_signal_regions_per_geno_sig_list(matbed_file_list_fp, sample_list_fp, remove_unique_coord_vars_flag, op_fp);
+		}
+	else if (t_string::compare_strings(argv[1], "-concat_variant_wide_genotype_signal_regions"))
+	{
+		if (argc != 8)
+		{
+			fprintf(stderr, "USAGE: %s -concat_variant_wide_genotype_signal_regions \
+[Matbed 1 file] [Samples 1 list path] \
+[Matbed 2 file] [Samples 2 list path] \
+[Remove unique variants? (0/1)] \
+[Output file]\n", argv[0]);
+			exit(1);
+		}
+
+		char* matbed1_fp = argv[2];
+		char* sample1_list_fp = argv[3];
+		char* matbed2_fp = argv[4];
+		char* sample2_list_fp = argv[5];
+		bool remove_unique_vars = (bool)(atoi(argv[6]) == 1);
+		char* op_fp = argv[7];
+
+		concat_variant_wide_genotype_signal_regions(matbed1_fp, sample1_list_fp, matbed2_fp, sample2_list_fp, remove_unique_vars, op_fp);
+		} // -concat_variant_wide_genotype_signal_regions option.
+	else if (t_string::compare_strings(argv[1], "-merge_genotype_signal_regions_per_list"))
+	{
+		// -save_train_test_matrices_for_CNN
+		if (argc != 7)
+		{
+			fprintf(stderr, "USAGE: %s -merge_genotype_signal_regions_per_list \
+[Variant regions list path] \
+[Samples list path] \
+[Match region names (0/1)?] \
+[Regions output file path] \
+[Sample ids output file path]\n", argv[0]);
+			exit(1);
+		}
+
+		char* regions_list_fp = argv[2];
+		char* samples_list_fp = argv[3];
+		bool match_region_names = (argv[4][0] == '1');
+		char* regions_op_fp = argv[5];
+		char* samples_op_fp = argv[6];
+
+		merge_samples_per_regions_list(regions_list_fp,
+			samples_list_fp,
+			match_region_names,
+			regions_op_fp,
+			samples_op_fp);
+			} // -merge_genotype_signal_regions_per_list option.
+	else if (t_string::compare_strings(argv[1], "-merge_genotype_signal_regions"))
+	{
+		// -save_train_test_matrices_for_CNN
+		if (argc != 8)
+		{
+			fprintf(stderr, "USAGE: %s -merge_genotype_signal_regions \
+[Sample1 Genotype signal matrix file path] \
+[Sample1 ids list file path] \
+[Sample2 Genotype signal matrix file path] \
+[Sample2 ids list file path] \
+[Match region names (0/1)?] \
+[Output file path] \n", argv[0]);
+			exit(1);
+		}
+
+		char* sample1_genotype_regs_fp = argv[2];
+		char* sample1_ids_fp = argv[3];
+		char* sample2_genotype_regs_fp = argv[4];
+		char* sample2_ids_fp = argv[5];
+		bool match_region_names = (argv[6][0] == '1');
+		char* op_fp = argv[7];
+
+		merge_samples_per_matching_genotype_signal_regions(sample1_genotype_regs_fp, sample1_ids_fp,
+			sample2_genotype_regs_fp, sample2_ids_fp,
+			match_region_names, op_fp);
+			}
 	
 	clock_t end_c = clock();
 	time_t end_t = time(NULL);

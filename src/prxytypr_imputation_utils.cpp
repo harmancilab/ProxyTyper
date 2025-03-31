@@ -1148,24 +1148,63 @@ static void* thread_callback_extract_BEAGLE_gt_option(void* __thread_info_ptr)
 
 		for (int i_s = 0; i_s < (int)input_geno_sample_ids->size(); i_s++)
 		{
-			if (max_input_geno == 3)
+			if (per_sample_haplocoded_geno[i_s] == -1)
 			{
-				int cur_hap0 = get_allele_per_haplotype(per_sample_haplocoded_geno[i_s], 0);
-				int cur_hap1 = get_allele_per_haplotype(per_sample_haplocoded_geno[i_s], 1);
-
-				// Following seems to match to ref option when haplocoded option is chosen: getallele(0) | getallele(1)
-				if (save_phased_gt_option)
+				char geno_str[10];
+				strcpy(geno_str, "\t./.");
+				MAIN_LINE_STR_BUFFER->concat_string(geno_str);
+			}
+			else
+			{
+				if (max_input_geno == 3)
 				{
-					//fprintf(f_gt_option, "\t%d|%d", cur_hap0, cur_hap1);
-					char geno_str[10];
-					sprintf(geno_str, "\t%d|%d", cur_hap0, cur_hap1);
-					MAIN_LINE_STR_BUFFER->concat_string(geno_str);
-				}
+					int cur_hap0 = get_allele_per_haplotype(per_sample_haplocoded_geno[i_s], 0);
+					int cur_hap1 = get_allele_per_haplotype(per_sample_haplocoded_geno[i_s], 1);
+
+					// Following seems to match to ref option when haplocoded option is chosen: getallele(0) | getallele(1)
+					if (save_phased_gt_option)
+					{
+						//fprintf(f_gt_option, "\t%d|%d", cur_hap0, cur_hap1);
+						char geno_str[10];
+						sprintf(geno_str, "\t%d|%d", cur_hap0, cur_hap1);
+						MAIN_LINE_STR_BUFFER->concat_string(geno_str);
+					}
+					else
+					{
+						char geno_str[10];
+
+						int geno = cur_hap0 + cur_hap1;
+
+						if (geno == 0)
+						{
+							//fprintf(f_gt_option, "\t0/0");
+							sprintf(geno_str, "\t0/0");
+						}
+						else if (geno == 1)
+						{
+							//fprintf(f_gt_option, "\t0/1");
+							sprintf(geno_str, "\t0/1");
+						}
+						else if (geno == 2)
+						{
+							//fprintf(f_gt_option, "\t1/1");
+							sprintf(geno_str, "\t1/1");
+						}
+
+						MAIN_LINE_STR_BUFFER->concat_string(geno_str);
+					} // phased gt option check.
+				} // max_geno=3 check.
 				else
 				{
-					char geno_str[10];
+					if (save_phased_gt_option)
+					{
+						fprintf(stderr, "%s(%d): We are not supposed to be here; saving GT as phased for an unphased panel..\n", __FILE__, __LINE__);
+						exit(1);
+					}
 
-					int geno = cur_hap0 + cur_hap1;
+					int geno = per_sample_haplocoded_geno[i_s];
+
+					char geno_str[10];
 
 					if (geno == 0)
 					{
@@ -1184,55 +1223,16 @@ static void* thread_callback_extract_BEAGLE_gt_option(void* __thread_info_ptr)
 					}
 					else
 					{
-						fprintf(stderr, "Could not parse the genotype: %s:%d::%d (%d, %d)\n",
+						fprintf(stderr, "Could not parse the genotype: %s:%d::%d (%d)\n",
 							cur_chr_input_geno_sig_regs->at(i_reg)->chrom, cur_chr_input_geno_sig_regs->at(i_reg)->start,
-							(int)(per_sample_haplocoded_geno[i_s]), cur_hap0, cur_hap1);
+							(int)(per_sample_haplocoded_geno[i_s]), geno);
 
 						exit(1);
 					}
 
 					MAIN_LINE_STR_BUFFER->concat_string(geno_str);
-				} // phased gt option check.
-			} // max_geno=3 check.
-			else
-			{
-				if (save_phased_gt_option)
-				{
-					fprintf(stderr, "%s(%d): We are not supposed to be here; saving GT as phased for an unphased panel..\n", __FILE__, __LINE__);
-					exit(1);
-				}
-
-				int geno = per_sample_haplocoded_geno[i_s];
-
-				char geno_str[10];
-
-				if (geno == 0)
-				{
-					//fprintf(f_gt_option, "\t0/0");
-					sprintf(geno_str, "\t0/0");
-				}
-				else if (geno == 1)
-				{
-					//fprintf(f_gt_option, "\t0/1");
-					sprintf(geno_str, "\t0/1");
-				}
-				else if (geno == 2)
-				{
-					//fprintf(f_gt_option, "\t1/1");
-					sprintf(geno_str, "\t1/1");
-				}
-				else
-				{
-					fprintf(stderr, "Could not parse the genotype: %s:%d::%d (%d)\n",
-						cur_chr_input_geno_sig_regs->at(i_reg)->chrom, cur_chr_input_geno_sig_regs->at(i_reg)->start,
-						(int)(per_sample_haplocoded_geno[i_s]), geno);
-
-					exit(1);
-				}
-
-				MAIN_LINE_STR_BUFFER->concat_string(geno_str);
-			} // max_geno!=3 check.
-
+				} // max_geno!=3 check.
+			} // geno==-1 check.
 		} // i_s loop.
 
 		//fprintf(f_gt_option, "\n");

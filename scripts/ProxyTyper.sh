@@ -26,6 +26,8 @@ Options:
         -uniquefy_panel_variants
         -subset_panel_variants
         -subset_panel_subjects
+        -pool_panels_samplewise
+        -pool_panels_variantwise
         -calculate_panel_AAF
     Resampling:
         -setup_BEAGLE_genetic_maps
@@ -106,6 +108,9 @@ then
 	then
 		cat $fullfile
 	elif [[ "${extension}" == "gz" ]]
+	then
+		gzip -cd $fullfile
+    elif [[ "${extension}" == "bgz" ]]
 	then
 		gzip -cd $fullfile
 	elif [[ "${extension}" == "zip" ]]
@@ -288,7 +293,9 @@ then
     fi
 
     echo "Extracting VCF subject identifiers from ${vcf_file}."
-	$0 -cat2stdout $vcf_file | head -n 1000 | awk {'if($1=="#CHROM"){for(i=10;i<=NF;i++){print $i}}'} > ${subjects_list_file}
+	#$0 -cat2stdout $vcf_file | head -n 1000 | awk {'if($1=="#CHROM"){for(i=10;i<=NF;i++){print $i}}'} > ${subjects_list_file}
+    $0 -cat2stdout $vcf_file | awk {'if(substr($1, 1,1)=="#"){print $0}else{exit}'} > temp_header.vcf
+    cat temp_header.vcf | awk {'if($1=="#CHROM"){for(i=10;i<=NF;i++){print $i}}'} > ${subjects_list_file}
 
     if [[ ! -f ${subjects_list_file} ]]
     then
@@ -330,7 +337,9 @@ then
     rm -f ${output_prefix}_subjects.list ${output_prefix}_variants.bed ${output_prefix}_genotypes.matrix.gz
 
     echo "Extracting VCF subject identifiers."
-	$0 -cat2stdout $vcf_file | head -n 1000 | awk {'if($1=="#CHROM"){for(i=10;i<=NF;i++){print $i}}'} > vcf_subjects.list
+	#$0 -cat2stdout $vcf_file | head -n 1000 | awk {'if($1=="#CHROM"){for(i=10;i<=NF;i++){print $i}}'} > vcf_subjects.list
+    $0 -cat2stdout $vcf_file | awk {'if(substr($1, 1,1)=="#"){print $0}else{exit}'} > temp_header.vcf
+    cat temp_header.vcf | awk {'if($1=="#CHROM"){for(i=10;i<=NF;i++){print $i}}'} > vcf_subjects.list
 
     ${PROXYTYPER_EXEC} -extract_genotype_signals_per_VCF_no_buffer_multithreaded ${vcf_file} vcf_subjects.list ${panel_is_phased} ${add_AF_info_2_id} ${n_threads} ${output_prefix}
 
@@ -571,6 +580,119 @@ fi
 
 #########################################################################################################
 
+if [[ "${cmd_option}" == "-pool_panels_samplewise" ]]
+then
+    if [[ $# -ne 4 ]]
+    then
+        echo "USAGE: $0 $1 [List with panel identifiers] [Output prefix]"
+        exit 1
+    fi
+
+    panels_list_file=$2
+    remove_unique_variants=$3
+    output_prefix=$4
+
+    $0 -check_files "${panels_list_file}"
+    if [[ $? -ne 0 ]]
+    then
+        echo "Sanity check failed (${LINENO})"
+        exit 1
+    fi
+
+    # Check each file in the panels list:
+    while IFS= read -r cur_panel_id; do
+        $0 -check_files ${cur_panel_id}_genotypes.matrix.gz "${cur_panel_id}_genotypes.matrix.gz" "${cur_panel_id}_variants.bed" "${cur_panel_id}_subjects.list"
+        if [[ $? -ne 0 ]]
+        then            
+            echo "Could not find the panel @ ${cur_panel_id}"..
+            exit 1
+        fi
+done < ${panels_list_file}
+
+    awk {'print $1"_subjects.list"'} ${panels_list_file} > temp_pooling_option_samples.list
+
+     ${PROXYTYPER_EXEC} -concat_variant_wide_genotype_signal_regions_per_list ${panels_list_file} temp_pooling_option_samples.list ${remove_unique_variants} ${output_prefix}
+
+    # Note that the list of variants may not be consecutive etc..
+    $0 -check_files "${output_prefix}_subjects.list" \
+"${output_prefix}_variants.bed" \
+"${output_prefix}_genotypes.matrix.gz" 
+    if [[ $? -ne 0 ]]
+    then
+        echo "Sanity check failed (${LINENO})"
+        exit 1
+    fi
+
+    # Calculate the elapsed time
+    end_time=$(date +%s)
+    elapsed_time=$((end_time - start_time))
+    date_str=`date +%M/%D/%Y-%H:%M:%S`
+    echo "[${date_str}]: \"$0 $@\" (${elapsed_time} seconds)" | tee -a "${WALLTIME_LOG}"
+
+    exit $?
+fi
+
+#########################################################################################################
+
+if [[ "${cmd_option}" == "-pool_panels_variantwise" ]]
+then
+    if [[ $# -ne 3 ]]
+    then
+        echo "USAGE: $0 $1 [List with panel identifiers] [Match region names? (0/1)] [Output prefix]"
+        exit 1
+    fi
+
+    panels_list_file=$2
+    match_region_names_flag=$3
+    output_prefix=$4
+    
+    $0 -check_files "${panels_list_file}"
+    if [[ $? -ne 0 ]]
+    then
+        echo "Sanity check failed (${LINENO})"
+        exit 1
+    fi
+
+    # Check each file in the panels list:
+    while IFS= read -r cur_panel_id; do
+        $0 -check_files ${cur_panel_id}_genotypes.matrix.gz "${cur_panel_id}_genotypes.matrix.gz" "${cur_panel_id}_variants.bed" "${cur_panel_id}_subjects.list"
+        if [[ $? -ne 0 ]]
+        then            
+            echo "Could not find the panel @ ${cur_panel_id}"..
+            exit 1
+        fi
+done < ${panels_list_file}
+
+    # Write a mock samples list file.
+    awk {'print $1"_subjects.list"'} ${panels_list_file} > temp_pooling_option_samples.list
+
+    ${PROXYTYPER_EXEC} -merge_genotype_signal_regions_per_list ${panels_list_file} temp_pooling_option_samples.list ${match_region_names_flag} ${output_prefix} temp_pooled
+    if [[ $? -ne 0 ]]
+    then
+        echo "Sanity check failed (${LINENO})"
+        exit 1
+    fi
+
+    # Note that the list of variants may not be consecutive etc..
+     $0 -check_files "${output_prefix}_subjects.list" \
+"${output_prefix}_variants.bed" \
+"${output_prefix}_genotypes.matrix.gz" 
+    if [[ $? -ne 0 ]]
+    then
+        echo "Sanity check failed (${LINENO})"
+        exit 1
+    fi
+
+    # Calculate the elapsed time
+    end_time=$(date +%s)
+    elapsed_time=$((end_time - start_time))
+    date_str=`date +%M/%D/%Y-%H:%M:%S`
+    echo "[${date_str}]: \"$0 $@\" (${elapsed_time} seconds)" | tee -a "${WALLTIME_LOG}"
+
+    exit $?
+fi
+
+#########################################################################################################
 if [[ "${cmd_option}" == "-subset_panel_variants" ]]
 then
     if [[ $# -ne 4 ]]
@@ -657,12 +779,12 @@ then
         exit 1
     fi
 
-    $0 -check_panel_sortedness ${output_prefix}
-    if [[ $? -ne 0 ]]
-    then
-        echo "Sanity check failed (${LINENO})"
-        exit 1
-    fi
+    #$0 -check_panel_sortedness ${output_prefix}
+    #if [[ $? -ne 0 ]]
+    #then
+    #    echo "Sanity check failed (${LINENO})"
+    #    exit 1
+    #fi
 
     # Calculate the elapsed time
     end_time=$(date +%s)
@@ -1826,12 +1948,32 @@ then
         exit 1
     fi
 
-    ${PROXYTYPER_EXEC} -convert_haplocoded_2_genocoded ${HC_panel_prefix} ${HC_panel_prefix}_subjects.list ${GC_panel_prefix}
-    res=$?
-    if [[ $res -ne 0 ]]
+    panel_max_geno=`${PROXYTYPER_EXEC} -get_max_genotype_value ${HC_panel_prefix} ${HC_panel_prefix}_subjects.list` 
+
+    if [ "${panel_max_geno}" -ne 3 ] && [ "${panel_max_geno}" -ne 2 ]
     then
-        echo "Extraction failed (${LINENO})."
-        exit 1
+        echo "Illegal genotype coding: ${panel_max_geno}"
+        exit 1 
+    fi
+
+    if [[ ${panel_max_geno} == 3 ]]
+    then
+        ${PROXYTYPER_EXEC} -convert_haplocoded_2_genocoded ${HC_panel_prefix} ${HC_panel_prefix}_subjects.list ${GC_panel_prefix}
+        res=$?
+        if [[ $res -ne 0 ]]
+        then
+            echo "Extraction failed (${LINENO})."
+            exit 1
+        fi
+    else
+        echo "Panel is not haplocoded, cannot unphase it; copying it instead.."
+        $0 -copy_panel ${HC_panel_prefix} ${GC_panel_prefix}
+        res=$?
+        if [[ $res -ne 0 ]]
+        then
+            echo "Extraction failed (${LINENO})."
+            exit 1
+        fi
     fi
 
     $0 -check_files "${GC_panel_prefix}_subjects.list" \
@@ -1905,6 +2047,23 @@ then
     if [[ $? -ne 0 ]]
     then
         echo "Target variants file not found @ ${target_vars_BED_fp} (${LINENO})."
+        exit 1
+    fi
+
+    ########################################################################################################################
+    # Check the max genotype values:
+    imputed_panel_max_geno=`${PROXYTYPER_EXEC} -get_max_genotype_value ${imputed_panel_prefix} ${imputed_panel_prefix}_subjects.list` 
+    known_panel_max_geno=`${PROXYTYPER_EXEC} -get_max_genotype_value ${known_panel_prefix} ${known_panel_prefix}_subjects.list` 
+
+    if [[ "${imputed_panel_max_geno}" != "3" ]]
+    then
+        echo "Imputed panel is not phased, ProxyTyper.sh expects panels to be phased to calculate R2; you can randomly phase them before running: ${imputed_panel_max_geno}"
+        exit 1
+    fi
+
+    if [[ "${known_panel_max_geno}" != "3" ]]
+    then
+        echo "Known panel is not phased, ProxyTyper.sh expects panels to be phased to calculate R2; you can randomly phase them before running: ${known_panel_max_geno}"
         exit 1
     fi
 

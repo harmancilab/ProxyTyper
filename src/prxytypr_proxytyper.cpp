@@ -44,7 +44,8 @@ void get_R2_per_imputed_genotypes(char* imputed_genotypes_fp, char* imputed_samp
 
 	if (ref_max_geno != imputed_max_geno)
 	{
-		fprintf(stderr, "Genotype encodings are not matching between ref/imputed panels.\n");
+		fprintf(stderr, "Genotype encodings are not matching between ref/imputed panels: %d/%d (%s/%s)\n", 
+			ref_max_geno,  imputed_max_geno, imputed_genotypes_fp, known_genotypes_fp);
 		exit(1);
 	}
 

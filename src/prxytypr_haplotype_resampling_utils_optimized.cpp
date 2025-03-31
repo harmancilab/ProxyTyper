@@ -264,8 +264,11 @@ void save_resampled_genotypes_per_recombination_patterns_multithreaded(vector<t_
 		t_string::print_padded_string(stderr, '\r', 100, "Thread %d finished..", thread_i);
 	} // thread_i loop.
 
+	t_string::print_padded_string(stderr, '\n', 100, "Pooling, saving, and cleaning up..");
+
 	// Concatenating results:
 	vector<t_annot_region*>* pooled_var_regs = new vector<t_annot_region*>();
+	vector<char*>* var_BED_files = new vector<char*>();
 	vector<char*>* matrix_gzip_files = new vector<char*>();
 	vector<char*>* sample_ids_list_files = new vector<char*>();
 	for (int thread_i = 0; thread_i < vecsize(threads); thread_i++)
@@ -274,6 +277,7 @@ void save_resampled_genotypes_per_recombination_patterns_multithreaded(vector<t_
 		sprintf(cur_var_regs_BED, "%s_%d_variants.bed", op_prefix, thread_i);
 		vector<t_annot_region*>* cur_vars = load_BED(cur_var_regs_BED);
 		pooled_var_regs->insert(pooled_var_regs->end(), cur_vars->begin(), cur_vars->end());
+		var_BED_files->push_back(t_string::copy_me_str(cur_var_regs_BED));
 
 		char cur_matrix_gz[1000];
 		sprintf(cur_matrix_gz, "%s_%d_genotypes.matrix.gz", op_prefix, thread_i);
@@ -284,19 +288,30 @@ void save_resampled_genotypes_per_recombination_patterns_multithreaded(vector<t_
 		sample_ids_list_files->push_back(t_string::copy_me_str(cur_sample_list_fp));
 	} // thread_i loop.
 
+	// Save the genotypes matrix (M).
 	char pooled_geno_matrix_fp[1000];
 	sprintf(pooled_geno_matrix_fp, "%s_genotypes.matrix.gz", op_prefix);
 	concatenateGzipFiles(pooled_geno_matrix_fp, matrix_gzip_files);
 
+	// Use one of the files as the pooled sample identifiers (S).
+	vector<char*>* pooled_sample_ids = buffer_file(sample_ids_list_files->at(0));
+	char subject_ids_list_fp[1000];
+	sprintf(subject_ids_list_fp, "%s_subjects.list", op_prefix);
+	save_lines(pooled_sample_ids, subject_ids_list_fp);
+
+	// Save the regions (R).
+	char pooled_var_BED_fp[1000];
+	sprintf(pooled_var_BED_fp, "%s_variants.bed", op_prefix);
+	dump_BED(pooled_var_BED_fp, pooled_var_regs);
+
+	// Clean up the files.
 	fprintf(stderr, "Cleaning up...                \n");
 	for (int i_f = 0; i_f < vecsize(matrix_gzip_files); i_f++)
 	{
 		delete_file(matrix_gzip_files->at(i_f));
+		delete_file(sample_ids_list_files->at(i_f));
+		delete_file(var_BED_files->at(i_f));
 	} // i_f loop.
-
-	char pooled_var_BED_fp[1000];
-	sprintf(pooled_var_BED_fp, "%s_variants.bed", op_prefix);
-	dump_BED(pooled_var_BED_fp, pooled_var_regs);
 
 	vector<t_annot_region*>* validation_regs = load_BED(pooled_var_BED_fp);
 	if (vecsize(validation_regs) != vecsize(haplocoded_geno_regs))
@@ -306,11 +321,6 @@ void save_resampled_genotypes_per_recombination_patterns_multithreaded(vector<t_
 
 		exit(1);
 	}
-
-	vector<char*>* pooled_sample_ids = buffer_file(sample_ids_list_files->at(0));
-	char subject_ids_list_fp[1000];
-	sprintf(subject_ids_list_fp, "%s_subjects.list", op_prefix);
-	save_lines(pooled_sample_ids, subject_ids_list_fp);
 
 	auto genotype_saving_end_chrono = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> genotype_saving_duration = genotype_saving_end_chrono - genotype_saving_start_chrono;

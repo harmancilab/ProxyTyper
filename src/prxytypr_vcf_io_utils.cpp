@@ -92,6 +92,7 @@ static void* thread_callback_extract_genotype_signals_per_VCF_no_buffer_multithr
 	char* info = new char[INFO_FIELD_L_BUFF];
 	char* format = new char[VAR_COL_L_BUFF];
 
+	int n_err_msgs = 0;
 	while (1)
 	{
 		// Read the next line.
@@ -249,7 +250,11 @@ static void* thread_callback_extract_genotype_signals_per_VCF_no_buffer_multithr
 				(buff[2] != '0' && buff[2] != '1' && buff[2] != '.'))
 			{
 				correctly_parsed_all_genotypes = false;
-				fprintf(stderr, "Failed to read the genotype correctly for entry %d in line: %s:%s: %s. sample: %s (Potentially multiallelic)\n", i_s, chrom, posn_str, id, buff);
+				if (n_err_msgs < 100)
+				{
+					fprintf(stderr, "Failed to read the genotype correctly for entry %d in line: %s:%s: %s. sample: %s (Potentially multiallelic)\n", i_s, chrom, posn_str, id, buff);
+					n_err_msgs++;
+				}
 				//exit(1);
 			}
 
@@ -257,7 +262,11 @@ static void* thread_callback_extract_genotype_signals_per_VCF_no_buffer_multithr
 			{
 				if (buff[1] == '/' && buff[0] != '.' && buff[2] != '.')
 				{
-					fprintf(stderr, "***WARNING::There are unphased genotypes although phased option is selected..***\n");
+					if (n_err_msgs < 100)
+					{
+						fprintf(stderr, "***WARNING::There are unphased genotypes although phased option is selected..***\n");
+						n_err_msgs++;
+					}
 				}
 
 				if (buff[0] == '.' || buff[2] == '.')
@@ -293,7 +302,11 @@ static void* thread_callback_extract_genotype_signals_per_VCF_no_buffer_multithr
 				// Unphased panel processing.
 				if (buff[1] == '|' && buff[0] != '.' && buff[2] != '.')
 				{
-					fprintf(stderr, "***WARNING::There are phased genotypes although unphased option is selected..***\n");
+					if (n_err_msgs < 100)
+					{
+						fprintf(stderr, "***WARNING::There are phased genotypes although unphased option is selected..***\n");
+						n_err_msgs++;
+					}
 				}
 
 				cur_var_geno_sig[i_s] = 0;
@@ -348,6 +361,7 @@ static void* thread_callback_extract_genotype_signals_per_VCF_no_buffer_multithr
 			char full_id[1000];
 			if (add_AF_info_2_id == 1)
 			{
+				t_string::replace_avoid_list(id, ":*-_$%@!~ ()[]|#%^&?", '.');
 				sprintf(full_id, "%s_%s_%s_%.5f", id, ref, alt, AAF);
 			}
 			else

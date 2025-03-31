@@ -2777,11 +2777,13 @@ static void* thread_callback_convert_haplocoded_signal_regs_2_VCF_w_header(void*
 	vector<t_annot_region*>* cur_chr_input_geno_sig_regs = (vector<t_annot_region*>*)(cur_thread_info[2]);
 	vector<char*>* input_geno_sample_ids = (vector<char*>*)(cur_thread_info[3]);
 
+	char* cur_thread_file_name = (char*)(cur_thread_info[4]);
+
 	//fprintf(stderr, "VCF Export Thread-%d: %d-%d // %d [max_geno=%d]\n", thr_i, var_start_i, var_end_i, vecsize(cur_chr_input_geno_sig_regs), max_input_geno);
 	t_string::print_padded_string(stderr, '\r', 100, "VCF Export Thread-%d: %d-%d // %d [max_geno=%d]", thr_i, var_start_i, var_end_i, vecsize(cur_chr_input_geno_sig_regs), max_input_geno);
 
-	char cur_thread_file_name[1000];
-	sprintf(cur_thread_file_name, "temp_vcf_export_%d.vcf.gz", thr_i);
+	//char cur_thread_file_name[1000];
+	//sprintf(cur_thread_file_name, "temp_vcf_export_%d.vcf.gz", thr_i);
 	//FILE* f_gt_option = open_f(cur_thread_file_name, "w");
 	gzFile f_gt_option = gzopen(cur_thread_file_name, "wb");
 	if (!f_gt_option)
@@ -2835,10 +2837,23 @@ static void* thread_callback_convert_haplocoded_signal_regs_2_VCF_w_header(void*
 				// Following seems to match to ref option when haplocoded option is chosen: getallele(0) | getallele(1)
 				if (save_phased_gt_option)
 				{
-					//fprintf(f_gt_option, "\t%d|%d", cur_hap0, cur_hap1);
-					char geno_str[10];
-					sprintf(geno_str, "\t%d|%d", cur_hap0, cur_hap1);
-					MAIN_LINE_STR_BUFFER->concat_string(geno_str);
+					int haplocoded_geno = per_sample_haplocoded_geno[i_s];
+
+					if (haplocoded_geno > 3 ||
+						haplocoded_geno < 0)
+					{
+						//fprintf(f_VCF, "\t.|.");
+						char geno_str[10];
+						sprintf(geno_str, "\t.|.");
+						MAIN_LINE_STR_BUFFER->concat_string(geno_str);
+					}
+					else
+					{
+						//fprintf(f_gt_option, "\t%d|%d", cur_hap0, cur_hap1);
+						char geno_str[10];
+						sprintf(geno_str, "\t%d|%d", cur_hap0, cur_hap1);
+						MAIN_LINE_STR_BUFFER->concat_string(geno_str);
+					}
 				}
 				else
 				{
@@ -2846,7 +2861,12 @@ static void* thread_callback_convert_haplocoded_signal_regs_2_VCF_w_header(void*
 
 					int geno = cur_hap0 + cur_hap1;
 
-					if (geno == 0)
+					if (geno > 3 ||
+						geno < 0)
+					{
+						sprintf(geno_str, "\t./.");
+					}
+					else if (geno == 0)
 					{
 						//fprintf(f_gt_option, "\t0/0");
 						sprintf(geno_str, "\t0/0");
@@ -2885,7 +2905,12 @@ static void* thread_callback_convert_haplocoded_signal_regs_2_VCF_w_header(void*
 
 				char geno_str[10];
 
-				if (geno == 0)
+				if (geno > 3 ||
+					geno < 0)
+				{
+					sprintf(geno_str, "\t./.");
+				}
+				else if (geno == 0)
 				{
 					//fprintf(f_gt_option, "\t0/0");
 					sprintf(geno_str, "\t0/0");
@@ -2986,7 +3011,13 @@ void convert_haplocoded_signal_regs_2_VCF_w_header_multithreaded(char* geno_sigs
 	t_restr_annot_region_list* restr_ref_panel_var_regs = restructure_annot_regions(reference_haplo_geno_sig_regs);
 
 	// Process all chromosomes.
-	for (int i_chr = 0; i_chr < (int)restr_ref_panel_var_regs->chr_ids->size(); i_chr++)
+	vector<char*>* per_chr_VCF_files = new vector<char*>();
+
+	// Add this to the very beginning of the VCF file; this goes before all of the chromosomes.
+	per_chr_VCF_files->push_back(t_string::copy_me_str("TEMP_VCF_HEADER.vcf.gz"));
+
+	fprintf(stderr, "Processing %d chromosomes..\n", vecsize(restr_ref_panel_var_regs->chr_ids));
+	for (int i_chr = 0; i_chr < vecsize(restr_ref_panel_var_regs->chr_ids); i_chr++)
 	{
 		fprintf(stderr, "Processing reference panel variants on %s\n", restr_ref_panel_var_regs->chr_ids->at(i_chr));
 
@@ -2996,6 +3027,7 @@ void convert_haplocoded_signal_regs_2_VCF_w_header_multithreaded(char* geno_sigs
 
 		int cur_var_start_i = 0;
 		vector<t_ansi_thread*>* threads = new vector<t_ansi_thread*>();
+		vector<char*>* per_thread_ref_files = new vector<char*>();
 		for (int i_thr = 0; i_thr < n_threads; i_thr++)
 		{
 			if (cur_var_start_i > vecsize(cur_chr_ref_panel_var_regs))
@@ -3018,6 +3050,13 @@ void convert_haplocoded_signal_regs_2_VCF_w_header_multithreaded(char* geno_sigs
 			cur_thread_info[2] = cur_chr_ref_panel_var_regs;
 			cur_thread_info[3] = reference_haplo_sample_ids;
 
+			char cur_thread_file_name[1000];
+			sprintf(cur_thread_file_name, "temp_%s_vcf_export_%d.vcf.gz", restr_ref_panel_var_regs->chr_ids->at(i_chr), i_thr);
+
+			per_thread_ref_files->push_back(t_string::copy_me_str(cur_thread_file_name));
+
+			cur_thread_info[4] = t_string::copy_me_str(cur_thread_file_name);
+
 			t_ansi_thread* thread = new t_ansi_thread(thread_callback_convert_haplocoded_signal_regs_2_VCF_w_header, cur_thread_info);
 			threads->push_back(thread);
 			thread->run_thread();
@@ -3026,23 +3065,23 @@ void convert_haplocoded_signal_regs_2_VCF_w_header_multithreaded(char* geno_sigs
 
 		} // i_thr loop.
 
-		vector<char*>* per_thread_ref_files = new vector<char*>();
-		per_thread_ref_files->push_back(t_string::copy_me_str("TEMP_VCF_HEADER.vcf.gz"));
+		//vector<char*>* per_thread_ref_files = new vector<char*>();
+		//per_thread_ref_files->push_back(t_string::copy_me_str("TEMP_VCF_HEADER.vcf.gz"));
 		for (int i_thr = 0; i_thr < vecsize(threads); i_thr++)
 		{
 			threads->at(i_thr)->wait_thread();
 			t_string::print_padded_string(stderr, '\r', 100, "Ref-Thread-%d finished..", i_thr);
 
-			char cur_thread_file_name[1000];
-			sprintf(cur_thread_file_name, "temp_vcf_export_%d.vcf.gz", i_thr);
-
-			per_thread_ref_files->push_back(t_string::copy_me_str(cur_thread_file_name));
 		} // i_thr loop.
 
 		fprintf(stderr, "Concatenating %d Ref matrices..                       \n", vecsize(per_thread_ref_files));
-		concatenateGzipFiles(op_VCF_fp, per_thread_ref_files);
+		char cur_chr_VCF_op_fp[1000];
+		sprintf(cur_chr_VCF_op_fp, "%s_%s.vcf.gz", op_VCF_fp, restr_ref_panel_var_regs->chr_ids->at(i_chr));
+		per_chr_VCF_files->push_back(t_string::copy_me_str(cur_chr_VCF_op_fp));
+		//concatenateGzipFiles(op_VCF_fp, per_thread_ref_files);
+		concatenateGzipFiles(cur_chr_VCF_op_fp, per_thread_ref_files);
 
-		fprintf(stderr, "Cleaning up..\n");
+		fprintf(stderr, "Cleaning up intermediate files for chromosome %s..\n", restr_ref_panel_var_regs->chr_ids->at(i_chr));
 		for (int i_thr = 0; i_thr < vecsize(per_thread_ref_files); i_thr++)
 		{
 			// Delete this file to make sure it does not interfere??
@@ -3050,9 +3089,22 @@ void convert_haplocoded_signal_regs_2_VCF_w_header_multithreaded(char* geno_sigs
 			delete_file(per_thread_ref_files->at(i_thr));
 		} // i_thr loop.
 
-		// Do not process multiple chromosome here.
-		break;
+		//// Do not process multiple chromosome here.
+		//break;
 	} // i_chr loop.
+
+	// Pool the per chromosome files.
+	fprintf(stderr, "Pooling %d chromosomes.. (including header file)\n", vecsize(per_chr_VCF_files));
+	concatenateGzipFiles(op_VCF_fp, per_chr_VCF_files);
+	fprintf(stderr, "Cleaning up..\n");
+	for (int i_thr = 0; i_thr < vecsize(per_chr_VCF_files); i_thr++)
+	{
+		// Delete this file to make sure it does not interfere??
+		t_string::print_padded_string(stderr, '\r', 100, "Deleting %s", per_chr_VCF_files->at(i_thr));
+		delete_file(per_chr_VCF_files->at(i_thr));
+	} // i_thr loop.
+
+	fprintf(stderr, "Done..");
 }
 
 

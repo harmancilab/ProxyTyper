@@ -1450,6 +1450,8 @@ void t_string::print_padded_string(FILE* stream, char ending_char, int l_max_pad
 	vsnprintf(str, (l_buffer - 1), format_str, args);
 	va_end(args);
 
+	t_string::replace_avoid_list(str, "\t", '^');
+
 	// We have the message, pad it.
 	int l_str = t_string::string_length(str);
 	char* pad_str = new char[l_max_pad + 1];
