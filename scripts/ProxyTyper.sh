@@ -584,7 +584,7 @@ if [[ "${cmd_option}" == "-pool_panels_samplewise" ]]
 then
     if [[ $# -ne 4 ]]
     then
-        echo "USAGE: $0 $1 [List with panel identifiers] [Output prefix]"
+        echo "USAGE: $0 $1 [List with panel identifiers] [Remove unique variants] [Output prefix]"
         exit 1
     fi
 
