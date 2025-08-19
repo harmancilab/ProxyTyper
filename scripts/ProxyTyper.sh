@@ -77,6 +77,8 @@ ${PROXYTYPER_EXEC} -validate_system ${n_threads} >& /dev/null
 if [[ $? -ne 0 ]]
 then
     echo "System check failed (${LINENO})"
+    echo "Most likely reason is that we set the number of threads to a large number. Is ${n_threads} threads too many on your system? Decrease this to something more reasonable on PROXYTYPER.ini and try running again."
+     
     exit 1
 fi
 ######################################################################
@@ -338,10 +340,10 @@ then
 
     echo "Extracting VCF subject identifiers."
 	#$0 -cat2stdout $vcf_file | head -n 1000 | awk {'if($1=="#CHROM"){for(i=10;i<=NF;i++){print $i}}'} > vcf_subjects.list
-    $0 -cat2stdout $vcf_file | awk {'if(substr($1, 1,1)=="#"){print $0}else{exit}'} > temp_header.vcf
+    $0 -cat2stdout "${vcf_file}" | awk {'if(substr($1, 1,1)=="#"){print $0}else{exit}'} > temp_header.vcf
     cat temp_header.vcf | awk {'if($1=="#CHROM"){for(i=10;i<=NF;i++){print $i}}'} > vcf_subjects.list
 
-    ${PROXYTYPER_EXEC} -extract_genotype_signals_per_VCF_no_buffer_multithreaded ${vcf_file} vcf_subjects.list ${panel_is_phased} ${add_AF_info_2_id} ${n_threads} ${output_prefix}
+    ${PROXYTYPER_EXEC} -extract_genotype_signals_per_VCF_no_buffer_multithreaded "${vcf_file}" vcf_subjects.list ${panel_is_phased} ${add_AF_info_2_id} ${n_threads} ${output_prefix}
 
     $0 -check_files "${output_prefix}_subjects.list" \
 "${output_prefix}_variants.bed" \
