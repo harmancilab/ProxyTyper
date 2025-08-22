@@ -42,5 +42,12 @@ After executable is built and installed, you can copy *ProxyTyper.sh* under the 
 ```
 which should show options to run *ProxyTyper.sh* and exit with no errors. 
 
+## Multithreading Options
+*ProxyTyper* makes extensive use of multithreading. By default the number of threads that *ProxyTyper* uses is set to 40 in *PROXYTYPER.ini* script:
+```
+n_threads=40
+```
+If your system does not have enough cores, *ProxyTyper* will detect this and will exit with an error message that may be missed easily. Make sure that the number of threads is set to a reasonable value, e.g., half the number of cores on your system.
+
 ---
 After installation, we recommend reviewing examples under */examples* folder.
