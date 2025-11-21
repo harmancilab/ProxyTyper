@@ -380,7 +380,7 @@ then
     beagle_map_archive=beagle_maps.zip
 
     echo "Downloading BEAGLE maps from ${BEAGLE_maps_URL}"
-    curl -s "${BEAGLE_maps_URL}" -o "${beagle_map_archive}"
+	curl --insecure -s "${BEAGLE_maps_URL}" -o "${beagle_map_archive}"
     unzip -o ${beagle_map_archive}
 
     rm -f -r ${PROXYTYPER_GENETIC_MAPS_DIR}
